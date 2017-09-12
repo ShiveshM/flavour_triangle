@@ -9,10 +9,11 @@ from __future__ import absolute_import, division
 import argparse
 
 import numpy as np
-from pisa import ureg, Q_
+
 from pisa.core.prior import Prior
 from pisa.core.param import Param, ParamSet
 from pisa.utils.log import logging, set_verbosity
+from pisa.utils.profiler import profile
 
 
 def compute_flavour_ratio(initial_ratio, mixing_matrix):
@@ -26,6 +27,7 @@ def compute_flavour_ratio(initial_ratio, mixing_matrix):
     return ratio
 
 
+@profile
 def randomise_paramset(mixing_matrix_paramset):
     """Randomise the mixing matrix values according to a gaussian prior."""
     logging.debug('Entering randomise_paramset')
@@ -37,11 +39,12 @@ def randomise_paramset(mixing_matrix_paramset):
         while not sucess:
             rndm = np.random.normal(param.nominal_value, param.prior.stddev)
             try:
-                param.validate_value(rndm)
+                param.value = rndm
             except ValueError:
+                logging.trace('Variation {0} out of range, '
+                              'retrying'.format(rndm))
                 continue
             sucess = True
-        param.value = rndm
     logging.trace('randomised mixing_matrix_paramset '
                   '=\n{0}'.format(mixing_matrix_paramset))
 
@@ -73,6 +76,8 @@ def initialise_paramset():
                       '{1}'.format(name, mean, stddev))
         prior= Prior(kind='gaussian', mean=mean, stddev=stddev)
         range = 3 * np.array([-stddev, stddev]) + mean
+        if range[0] < 0: range[0] = 0.01
+        if range[1] > 1: range[1] = 0.99
         return Param(
             name=name, value=mean, prior=prior, range=range, is_fixed=False,
             is_discrete=False, **kwargs
@@ -149,6 +154,7 @@ def main():
             for x in flav_comp:
                 f.write('{0:.6f} '.format(x))
             f.write('\n')
+
 
 main.__doc__ = __doc__
 
