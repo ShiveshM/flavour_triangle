@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 """
-Generate a sample of flavour ratio points with fluctuations from a non-unitary
-mixing matrix.
+Generate a sample of flavour ratio points with fluctuations from a
+unitary 4x4 mixing matrix.
 """
 
 from __future__ import absolute_import, division

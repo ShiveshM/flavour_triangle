@@ -1,0 +1,16 @@
+
+
+def TriangleLikelihood(flavor_ratio):
+    // this piece comes from a real fit, here faked with a gaussian fit
+    flavor_ratio_bf = (0.5,0.5,0)
+    sigma_fr = 0.2*flavor_ratio_bf;
+    return loggaussian(flavor_ratio, mu = flavor_ratio_bf, sigma = sigma_fr);
+
+def prior(u...)
+
+def lnlike(theta, initial_flavor_ratio = crap):
+    U1,U2 = theta;
+    obs_flavor_ratio = calculate_flavor_ratio(U..., initial_flavor_ratio)
+    return TriangleLikelihood(obs_flavor_ratio) + prior(U...)
+
+emcee -> lnlike, prior, walkers, all tihs crap.theta=[U1,...]

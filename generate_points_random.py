@@ -27,107 +27,41 @@ def compute_flavour_ratio(initial_ratio, mixing_matrix):
     return ratio
 
 
-def get_mm_params(mixing_matrix_paramset):
-    """Return the mixing matrix parameters as a 2D tuple."""
-    logging.trace('Entering get_mm_params')
-    Ue1 = mixing_matrix_paramset.Ue1
-    Ue2 = mixing_matrix_paramset.Ue2
-    Ue3 = mixing_matrix_paramset.Ue3
-    Um1 = mixing_matrix_paramset.Um1
-    Um2 = mixing_matrix_paramset.Um2
-    Um3 = mixing_matrix_paramset.Um3
-    Ut1 = mixing_matrix_paramset.Ut1
-    Ut2 = mixing_matrix_paramset.Ut2
-    Ut3 = mixing_matrix_paramset.Ut3
-    return ((Ue1, Ue2, Ue3), (Um1, Um2, Um3), (Ut1, Ut2, Ut3))
-
-
-def randomise_param(mm_param):
-    """Randomise a single mixing matrix value according to its bounds."""
-    logging.trace('Entering randomise_param')
-    success = False
-    while not success:
-        rndm = np.random.normal(mm_param.nominal_value, mm_param.prior.stddev)
-        try:
-            mm_param.value = rndm
-        except ValueError:
-            logging.trace('Variation {0} out of range for param {1}, '
-                          'retrying'.format(rndm, mm_param.name))
-            continue
-        success = True
-
-
-def randomise_params(mm_params, non_unitarity, maxtrials):
-    """Randomise a set of mixing matrix values according to a gaussian
-    prior.
-    """
-    logging.debug('Entering randomise_params')
-    success = False
-    i = 0
-    while not success:
-        if i == maxtrials:
-            raise ValueError('Maxtrials has been reached')
-        randomise_param(mm_params[0])
-        randomise_param(mm_params[1])
-        i +=1
-        mm2_value_2 = non_unitarity - (mm_params[0].value.m**2 +
-                                       mm_params[1].value.m**2)
-        if mm2_value_2 < 0.:
-            logging.trace('Variation {0} out of range for param {1}, '
-                          'retrying'.format(mm2_value_2, mm_params[2].name))
-            continue
-        mm2_value = np.sqrt(mm2_value_2)
-        try:
-            mm_params[2].value = mm2_value
-        except ValueError:
-            # logging.debug('0 = {0} , 1 = {1} , nu = {2} , mm2_value = {3}'.format(
-            #     mm_params[0].value.m, mm_params[1].value.m, non_unitarity, mm2_value
-            # ))
-            logging.trace('Variation {0} out of range for param {1}, '
-                          'retrying'.format(mm2_value, mm_params[2].name))
-            continue
-        success = True
-
-
 @profile
-def randomise_paramset(mixing_matrix_paramset, central_nonunitarity,
-                       sigma_nonunitarity, maxtrials):
-    """Randomise all mixing matrix values according to a gaussian prior."""
+def randomise_paramset(mixing_matrix_paramset):
+    """Randomise the mixing matrix values according to a gaussian prior."""
     logging.debug('Entering randomise_paramset')
     # TODO(shivesh): gaussian only
     logging.trace('initial mixing_matrix_paramset '
                   '=\n{0}'.format(mixing_matrix_paramset))
-    mm_params = get_mm_params(mixing_matrix_paramset)
-    success = False
-    while not success:
-        non_unitarity = np.random.normal(
-            central_nonunitarity, sigma_nonunitarity
-        )
-        logging.trace('Setting non-unitarity to {0}'.format(non_unitarity))
-        if non_unitarity < 0.:
-            continue
-        try:
-            for row in mm_params:
-                randomise_params(row, non_unitarity, maxtrials)
-        except ValueError:
-            logging.debug('Maxtrials {0} reached for non-unitarity = {1}, '
-                          'trying another value of non-unitarity'.format(
-                              maxtrials, non_unitarity
-                          ))
-            continue
-        success = True
-    logging.debug('randomised mixing_matrix_paramset '
+    for param in mixing_matrix_paramset:
+        sucess = False
+        while not sucess:
+            rndm = np.random.normal(param.nominal_value, param.prior.stddev)
+            try:
+                param.value = rndm
+            except ValueError:
+                logging.trace('Variation {0} out of range, '
+                              'retrying'.format(rndm))
+                continue
+            sucess = True
+    logging.trace('randomised mixing_matrix_paramset '
                   '=\n{0}'.format(mixing_matrix_paramset))
 
 
 def create_matrix(mixing_matrix_paramset):
     """Create a matrix from a ParamSet of mixing matrices."""
     logging.debug('Entering create_matrix')
-    def get_m(a):
-        return a.value.m
-    v_get_m = np.vectorize(get_m)
-    mm_params = v_get_m(get_mm_params(mixing_matrix_paramset))
-    matrix = np.array(mm_params)
+    Ue1 = mixing_matrix_paramset.Ue1.value.m
+    Ue2 = mixing_matrix_paramset.Ue2.value.m
+    Ue3 = mixing_matrix_paramset.Ue3.value.m
+    Um1 = mixing_matrix_paramset.Um1.value.m
+    Um2 = mixing_matrix_paramset.Um2.value.m
+    Um3 = mixing_matrix_paramset.Um3.value.m
+    Ut1 = mixing_matrix_paramset.Ut1.value.m
+    Ut2 = mixing_matrix_paramset.Ut2.value.m
+    Ut3 = mixing_matrix_paramset.Ut3.value.m
+    matrix = np.array([[Ue1, Ue2, Ue3], [Um1, Um2, Um3], [Ut1, Ut2, Ut3]])
     logging.trace('matrix = \n{0}'.format(matrix))
     return matrix
 
@@ -178,20 +112,8 @@ def parse_args():
         help='Path to output file'
     )
     parser.add_argument(
-        '--central-nonunitarity', type=float, default=1.0,
-        help='central value for non-unitarity'
-    )
-    parser.add_argument(
-        '--sigma-nonunitarity', type=float, default=0.2,
-        help='1 sigma limit for non-unitarity'
-    )
-    parser.add_argument(
         '--number', type=int, default=100,
         help='Number of points to sample'
-    )
-    parser.add_argument(
-        '--maxtrials', type=int, default=100,
-        help='Maximum number of trials to try per non-unitarity value'
     )
     parser.add_argument(
         '--seed', type=int, default=99,
@@ -218,10 +140,7 @@ def main():
         for i in xrange(args.number):
             logging.trace('Point #{0}'.format(i))
             randomise_paramset(
-                mixing_matrix_paramset=mm_paramset,
-                central_nonunitarity=args.central_nonunitarity,
-                sigma_nonunitarity=args.sigma_nonunitarity,
-                maxtrials=args.maxtrials
+                mixing_matrix_paramset=mm_paramset
             )
 
             mm_matrix = create_matrix(
@@ -234,7 +153,6 @@ def main():
 
             for x in flav_comp:
                 f.write('{0:.6f} '.format(x))
-            f.write('{0:.6f}'.format(np.sum(flav_comp)))
             f.write('\n')
 
 
