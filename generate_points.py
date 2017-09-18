@@ -9,6 +9,7 @@ from __future__ import absolute_import, division
 import argparse
 
 import numpy as np
+import scipy.linalg
 
 from pisa.core.prior import Prior
 from pisa.core.param import Param, ParamSet
@@ -20,7 +21,7 @@ def compute_flavour_ratio(initial_ratio, mixing_matrix):
     """Compute the observed flavour ratio assuming decoherence."""
     logging.debug('Entering compute_flavour_ratio')
     composition = np.einsum(
-        'ai, bi, a -> b', mixing_matrix**2, mixing_matrix**2, initial_ratio
+        'ai, bi, a -> b', abs(mixing_matrix)**2, abs(mixing_matrix)**2, initial_ratio
     )
     ratio = composition / np.sum(initial_ratio)
     logging.trace('Computed flavour ratio = {0}'.format(ratio))
@@ -57,9 +58,32 @@ def randomise_param(mm_param):
         success = True
 
 
+def make_unitary(x):
+    """Create a unitary matrix from a given matrix."""
+    q, r = scipy.linalg.qr(x)
+    d = r.diagonal()
+    q *= d/abs(d)
+    return q
+
+
+def gauss(name, mean, stddev, **kwargs):
+    logging.trace('Entering gauss: name = {0}, mean = {1}, stddev = '
+                  '{1}'.format(name, mean, stddev))
+    prior= Prior(kind='gaussian', mean=mean, stddev=stddev)
+    range = 3 * np.array([-stddev, stddev]) + mean
+    if range[0] < 0: range[0] = 0.01
+    if range[1] > 1: range[1] = 0.99
+    return Param(
+        name=name, value=mean, prior=prior, range=range, is_fixed=False,
+        is_discrete=False, **kwargs
+    )
+
+
 def randomise_params(mm_params, non_unitarity, maxtrials):
     """Randomise a set of mixing matrix values according to a gaussian
-    prior.
+    prior. Constraints are given by having both the rows and the columns being
+    summed to a specific value of non-unitarity and also by the 3 sigma C.L.
+    given by Parke's paper.
     """
     logging.debug('Entering randomise_params')
     success = False
@@ -67,26 +91,36 @@ def randomise_params(mm_params, non_unitarity, maxtrials):
     while not success:
         if i == maxtrials:
             raise ValueError('Maxtrials has been reached')
-        randomise_param(mm_params[0])
-        randomise_param(mm_params[1])
+        for x in mm_params:
+            for y in x:
+                randomise_param(y)
         i +=1
-        mm2_value_2 = non_unitarity - (mm_params[0].value.m**2 +
-                                       mm_params[1].value.m**2)
-        if mm2_value_2 < 0.:
-            logging.trace('Variation {0} out of range for param {1}, '
-                          'retrying'.format(mm2_value_2, mm_params[2].name))
-            continue
-        mm2_value = np.sqrt(mm2_value_2)
+        z = []
+        for y in mm_params:
+            z += [x.value.m for x in y]
+            z.append(np.sqrt(non_unitarity + 0*1j - np.sum(map(lambda x: x.value.m**2, y))))
+        for y in np.array(mm_params).T:
+            z.append(np.sqrt(non_unitarity + 0*1j - np.sum(map(lambda x: x.value.m**2, y))))
+        z.append(np.sqrt(non_unitarity - (z[12]**2 + z[13]**2 + z[14]**2)))
+        z = np.array(z).reshape(4, 4)
+
+        z_u = make_unitary(z)
+        mm_params_4d = np.zeros((4, 4))
         try:
-            mm_params[2].value = mm2_value
+            for x in xrange(4):
+                for y in xrange(4):
+                    if x < 3 and y < 3:
+                        mm_params[x][y].value = abs(z_u[x][y])
+                    mm_params_4d[x][y] = z_u[x][y]
         except ValueError:
             # logging.debug('0 = {0} , 1 = {1} , nu = {2} , mm2_value = {3}'.format(
             #     mm_params[0].value.m, mm_params[1].value.m, non_unitarity, mm2_value
             # ))
-            logging.trace('Variation {0} out of range for param {1}, '
-                          'retrying'.format(mm2_value, mm_params[2].name))
+            logging.trace('Variation {0} out of range'.format(mm_params_4d))
             continue
         success = True
+
+    return mm_params_4d
 
 
 @profile
@@ -105,10 +139,12 @@ def randomise_paramset(mixing_matrix_paramset, central_nonunitarity,
         )
         logging.trace('Setting non-unitarity to {0}'.format(non_unitarity))
         if non_unitarity < 0.:
+            logging.trace('Non unitarity set to negative value, trying '
+                          'another value of non-unitarity.')
             continue
         try:
-            for row in mm_params:
-                randomise_params(row, non_unitarity, maxtrials)
+            mm_params_4d = randomise_params(mm_params, non_unitarity,
+                                            maxtrials)
         except ValueError:
             logging.debug('Maxtrials {0} reached for non-unitarity = {1}, '
                           'trying another value of non-unitarity'.format(
@@ -116,8 +152,29 @@ def randomise_paramset(mixing_matrix_paramset, central_nonunitarity,
                           ))
             continue
         success = True
+
+    s_mixing_matrix_paramset = []
+    for x in mixing_matrix_paramset:
+        s_mixing_matrix_paramset.append(x)
+    s_mixing_matrix_paramset.append(gauss(name=r'Ue4', mean=mm_params_4d[0][3],
+                                          stddev=0.01))
+    s_mixing_matrix_paramset.append(gauss(name=r'Um4', mean=mm_params_4d[1][3],
+                                          stddev=0.01))
+    s_mixing_matrix_paramset.append(gauss(name=r'Ut4', mean=mm_params_4d[2][3],
+                                          stddev=0.01))
+    s_mixing_matrix_paramset.append(gauss(name=r'Us1', mean=mm_params_4d[3][0],
+                                          stddev=0.01))
+    s_mixing_matrix_paramset.append(gauss(name=r'Us2', mean=mm_params_4d[3][1],
+                                          stddev=0.01))
+    s_mixing_matrix_paramset.append(gauss(name=r'Us3', mean=mm_params_4d[3][2],
+                                          stddev=0.01))
+    s_mixing_matrix_paramset.append(gauss(name=r'Us4', mean=mm_params_4d[3][3],
+                                          stddev=0.01))
+    s_mixing_matrix_paramset = ParamSet(s_mixing_matrix_paramset)
+
     logging.debug('randomised mixing_matrix_paramset '
-                  '=\n{0}'.format(mixing_matrix_paramset))
+                  '=\n{0}'.format(s_mixing_matrix_paramset))
+    return s_mixing_matrix_paramset
 
 
 def create_matrix(mixing_matrix_paramset):
@@ -136,18 +193,6 @@ def initialise_paramset():
     """Initialise mixing matrix with priors from arxiv 1508.05095."""
     logging.debug('Entering initialise_paramset')
     # TODO(shivesh): use splines instead of gaussian
-
-    def gauss(name, mean, stddev, **kwargs):
-        logging.trace('Entering gauss: name = {0}, mean = {1}, stddev = '
-                      '{1}'.format(name, mean, stddev))
-        prior= Prior(kind='gaussian', mean=mean, stddev=stddev)
-        range = 3 * np.array([-stddev, stddev]) + mean
-        if range[0] < 0: range[0] = 0.01
-        if range[1] > 1: range[1] = 0.99
-        return Param(
-            name=name, value=mean, prior=prior, range=range, is_fixed=False,
-            is_discrete=False, **kwargs
-        )
 
     # TODO(shivesh): these are obtained by eye!
     mm_pm = []
@@ -217,19 +262,20 @@ def main():
         logging.debug('Writing to file {0}'.format(args.outfile))
         for i in xrange(args.number):
             logging.trace('Point #{0}'.format(i))
-            randomise_paramset(
+            s_mm_paramset = randomise_paramset(
                 mixing_matrix_paramset=mm_paramset,
                 central_nonunitarity=args.central_nonunitarity,
                 sigma_nonunitarity=args.sigma_nonunitarity,
                 maxtrials=args.maxtrials
             )
 
+            print 'HERE', s_mm_paramset
             mm_matrix = create_matrix(
-                mixing_matrix_paramset=mm_paramset
+                mixing_matrix_paramset=s_mm_paramset
             )
 
             flav_comp = compute_flavour_ratio(
-                args.initial_ratio, mm_matrix
+                args.initial_ratio + [0], mm_matrix
             )
 
             for x in flav_comp:
