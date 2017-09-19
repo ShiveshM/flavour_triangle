@@ -6,6 +6,7 @@ From a gaussian likelihood run an MCMC scan to find the posteriors
 from __future__ import absolute_import, division
 
 import argparse
+import multiprocessing
 
 import numpy as np
 from scipy.stats import multivariate_normal
@@ -111,7 +112,10 @@ def main():
     p0 = np.random.normal(p0_base, p0_std, size=[ntemps, nwalkers, ndim])
     print map(lnprior, p0[0])
 
-    sampler = emcee.PTSampler(ntemps, nwalkers, ndim, triangle_llh, lnprior, threads=4)
+    thread = multiprocessing.cpu_count()
+    sampler = emcee.PTSampler(
+        ntemps, nwalkers, ndim, triangle_llh, lnprior, threads=threads
+    )
 
     print "Running burn-in"
     for result in tqdm.tqdm(sampler.sample(p0, iterations=burnin), total=burnin):
