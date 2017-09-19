@@ -12,7 +12,7 @@ import matplotlib
 import corner
 
 print 'Making plot'
-samples = np.load('./data/mcmc_chain.npy')
+samples = np.load('/data/mandalia/flavour_ratio/data/mcmc_chain.npy')
 fig = corner.corner(samples)
 fig.savefig("untitled.png")
 print 'DONE!'
