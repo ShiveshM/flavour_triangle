@@ -112,7 +112,7 @@ def main():
     p0 = np.random.normal(p0_base, p0_std, size=[ntemps, nwalkers, ndim])
     print map(lnprior, p0[0])
 
-    thread = multiprocessing.cpu_count()
+    threads = multiprocessing.cpu_count()
     sampler = emcee.PTSampler(
         ntemps, nwalkers, ndim, triangle_llh, lnprior, threads=threads
     )
