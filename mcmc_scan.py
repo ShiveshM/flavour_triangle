@@ -19,33 +19,47 @@ BESTFIT = [0.5, 0.5, 0.0]
 SIGMA = 0.2
 
 
+def u_to_fr(initial_fr, mm_params):
+    """Compute the observed flavour ratio assuming decoherence."""
+    matrix = np.array(mm_params).reshape(3, 3)
+    composition = np.einsum(
+        'ai, bi, a -> b', abs(matrix)**2, abs(matrix)**2, initial_fr
+    )
+    ratio = composition / np.sum(initial_fr)
+    return ratio
+
+
 def triangle_llh(theta):
     """-Log likelihood function for a given theta."""
-    fr = theta[-3:]
+    fr1, fr2 = theta[-2:]
+    fr3 = 1.0 - (fr1 + fr2)
+
+    fr = u_to_fr((fr1, fr2, fr3), theta[:-2])
     fr_bf = BESTFIT
-    SIGMA = 0.2
     cov_fr = np.identity(3) * SIGMA
     return -np.log10(multivariate_normal.pdf(fr, mean=fr_bf, cov=cov_fr))
 
 
 def lnprior(theta):
     """Priors on theta."""
-    ue1, ue2, ue3, um1, um2, um3, ut1, ut2, ut3, fr1, fr2, fr3 = theta
-    
+    ue1, ue2, ue3, um1, um2, um3, ut1, ut2, ut3, fr1, fr2 = theta
+
+    fr3 = 1.0 - (fr1 + fr2)
+
     allow = True
     # Flavour ratio bounds
     if 0. <= fr1 <= 1.0 and 0. <= fr2 <= 1.0 and 0. <= fr3 <= 1.0:
         pass
     else: allow = False
 
-    # mixing elements 3sigma bound using nufit
+    # Mixing elements 3sigma bound from nufit
     if 0.800 <= ue1 <= 0.844 and 0.515 <= ue2 <= 0.581 and 0.139 <= ue3 <= 0.155 \
     and 0.229 <= um1 <= 0.516 and 0.438 <= um2 <= 0.699 and 0.614 <= um3 <= 0.790 \
     and 0.249 <= ut1 <= 0.528 and 0.462 <= ut2 <= 0.715 and 0.595 <= ut3 <= 0.776:
         pass
     else: allow = False
-        
-    # TODO(shivesh): enforce sum of flavour ratios? enforce unitarity?
+
+    # TODO(shivesh): enforce unitarity?
     if allow: return 0.
     else: return -np.inf
 
@@ -101,13 +115,13 @@ def main():
     BESTFIT = np.array(args.bestfit_ratio) / float(np.sum(args.bestfit_ratio))
     SIGMA = args.sigma_ratio
 
-    ndim = 12
+    ndim = 11
     nwalkers = args.nwalkers
     ntemps = 1
     burnin = args.burnin
     betas = np.array([1e0, 1e-1, 1e-2, 1e-3, 1e-4])
-    p0_base = [0.82, 0.55, 0.14, 0.40, 0.50, 0.65, 0.40, 0.60, 0.65, 0.5, 0.5, 0.5]
-    p0_std = [0.01, 0.01, 0.001, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.1, 0.1, 0.1]
+    p0_base = [0.82, 0.55, 0.14, 0.40, 0.50, 0.65, 0.40, 0.60, 0.65, 0.5, 0.5]
+    p0_std = [0.01, 0.01, 0.001, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.1, 0.1]
 
     p0 = np.random.normal(p0_base, p0_std, size=[ntemps, nwalkers, ndim])
     print map(lnprior, p0[0])

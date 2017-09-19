@@ -20,7 +20,7 @@ def parse_args():
         help='Path to chains'
     )
     parser.add_argument(
-        '--outfile', type=str, default='./untitled.npy',
+        '--outfile', type=str, default='./untitled.png',
         help='Path to output chains'
     )
     args = parser.parse_args()
