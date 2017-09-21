@@ -52,10 +52,17 @@ def lnprior(theta):
         pass
     else: allow = False
 
-    # Mixing elements 3sigma bound from nufit
-    if 0.800 <= ue1 <= 0.844 and 0.515 <= ue2 <= 0.581 and 0.139 <= ue3 <= 0.155 \
-    and 0.229 <= um1 <= 0.516 and 0.438 <= um2 <= 0.699 and 0.614 <= um3 <= 0.790 \
-    and 0.249 <= ut1 <= 0.528 and 0.462 <= ut2 <= 0.715 and 0.595 <= ut3 <= 0.776:
+    # # Mixing elements 3sigma bound from nufit
+    # if 0.800 <= ue1 <= 0.844 and 0.515 <= ue2 <= 0.581 and 0.139 <= ue3 <= 0.155 \
+    # and 0.229 <= um1 <= 0.516 and 0.438 <= um2 <= 0.699 and 0.614 <= um3 <= 0.790 \
+    # and 0.249 <= ut1 <= 0.528 and 0.462 <= ut2 <= 0.715 and 0.595 <= ut3 <= 0.776:
+    #     pass
+    # else: allow = False
+
+    # Mixing element wide boundary
+    if 0.0 <= ue1 <= 1.0 and 0.0 <= ue2 <= 1.0 and 0.0 <= ue3 <= 1.0 \
+    and 0.0 <= um1 <= 1.0 and 0.0 <= um2 <= 1.0 and 0.0 <= um3 <= 1.0 \
+    and 0.0 <= ut1 <= 1.0 and 0.0 <= ut2 <= 1.0 and 0.0 <= ut3 <= 1.0:
         pass
     else: allow = False
 
