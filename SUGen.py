@@ -4,7 +4,8 @@ from scipy.integrate import ode
 import matplotlib.pyplot as plt
 from numpy import linalg as LA
 
-import PhysConst as PC
+# import PhysConst as PC
+import neutrinocommon.physconst.physicsconstants as PC
 import random
 import cmath
 import math
