@@ -17,28 +17,35 @@ font = {'family' : 'serif',
         'weight' : 'bold',
         'size'   : 18}
 
-labels=[r'U_{e1}', r'U_{e2}', r'U_{e3}', \
-        r'U_{\mu1}', r'U_{\mu2}', r'U_{\mu3}', \
-        r'U_{\tau1}', r'U_{\tau2}', r'U_{\tau3}', \
-        r'\phi_e', r'\phi_\mu']
+# labels=[r'\mid U_{e1} \mid', r'\mid U_{e2} \mid', r'\mid U_{e3} \mid', \
+#         r'\mid U_{\mu1} \mid', r'\mid U_{\mu2} \mid', r'\mid U_{\mu3} \mid', \
+#         r'\mid U_{\tau1} \mid', r'\mid U_{\tau2} \mid', r'\mid U_{\tau3} \mid', \
+#         r'\phi_e', r'\phi_\mu']
+labels = [r'{0}'.format(x) for x in xrange(11)]
+print labels
 
 ranges = []
-prior_vecs = []
 for x in xrange(len(labels)):
     ranges.append([0, 1])
-    prior_vecs.append(np.random.uniform(0,1,10000000))
 
-Tchain = np.load('/data/mandalia/flavour_ratio/data/mcmc_chain.npy')
+# Tchain = np.load('/data/mandalia/flavour_ratio/data/mcmc_chain.npy')
+Tchain = np.load('./data/mcmc_chain.npy')
 
-Tsample=mcsamples.MCSamples(samples=Tchain,labels=labels,names=[str(i) for i in range(11)],ranges=ranges)
-prior_samples=mcsamples.MCSamples(samples=prior_vecs,labels=labels,names=[str(i) for i in range(len(labels))],
-                                  ranges=ranges)
+Tsample=mcsamples.MCSamples(
+    samples=Tchain, labels=labels, ranges=ranges
+)
 
-g = plots.getSubplotPlotter(width_inch=10)
-g.settings.legend_fontsize=20
-g.settings.axes_fontsize=9
+Tsample.updateSettings({'contours': [0.90, 0.99]})
+Tsample.num_bins_2D=500
+Tsample.fine_bins_2D=500
+Tsample.smooth_scale_2D=0.03
+
+g = plots.getSubplotPlotter()
+g.settings.num_plot_contours = 2
+g.settings.legend_fontsize = 25
+g.settings.axes_fontsize = 10
 g.settings.figure_legend_frame = False
-g.triangle_plot([prior_samples,Tsample], 
-                filled=True, legend_labels=["Prior","Posterior"],
-                legend_loc="upper right",)
+g.triangle_plot(
+    [Tsample], filled=True, legend_loc="upper right"
+)
 g.export("fr_posterior.pdf")
