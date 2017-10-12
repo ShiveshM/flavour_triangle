@@ -52,21 +52,27 @@ def lnprior(theta):
         pass
     else: allow = False
 
-    # # Mixing elements 3sigma bound from nufit
-    # if 0.800 <= ue1 <= 0.844 and 0.515 <= ue2 <= 0.581 and 0.139 <= ue3 <= 0.155 \
-    # and 0.229 <= um1 <= 0.516 and 0.438 <= um2 <= 0.699 and 0.614 <= um3 <= 0.790 \
-    # and 0.249 <= ut1 <= 0.528 and 0.462 <= ut2 <= 0.715 and 0.595 <= ut3 <= 0.776:
-    #     pass
-    # else: allow = False
-
-    # Mixing element wide boundary
-    if 0.0 <= ue1 <= 1.0 and 0.0 <= ue2 <= 1.0 and 0.0 <= ue3 <= 1.0 \
-    and 0.0 <= um1 <= 1.0 and 0.0 <= um2 <= 1.0 and 0.0 <= um3 <= 1.0 \
-    and 0.0 <= ut1 <= 1.0 and 0.0 <= ut2 <= 1.0 and 0.0 <= ut3 <= 1.0:
+    # Mixing elements 3sigma bound from nufit
+    if 0.800 <= ue1 <= 0.844 and 0.515 <= ue2 <= 0.581 and 0.139 <= ue3 <= 0.155 \
+    and 0.229 <= um1 <= 0.516 and 0.438 <= um2 <= 0.699 and 0.614 <= um3 <= 0.790 \
+    and 0.249 <= ut1 <= 0.528 and 0.462 <= ut2 <= 0.715 and 0.595 <= ut3 <= 0.776:
         pass
     else: allow = False
 
+    # Mixing element wide boundary
+    # if 0.0 <= ue1 <= 1.0 and 0.0 <= ue2 <= 1.0 and 0.0 <= ue3 <= 1.0 \
+    # and 0.0 <= um1 <= 1.0 and 0.0 <= um2 <= 1.0 and 0.0 <= um3 <= 1.0 \
+    # and 0.0 <= ut1 <= 1.0 and 0.0 <= ut2 <= 1.0 and 0.0 <= ut3 <= 1.0:
+    #     pass
+    # else: allow = False
+
     # TODO(shivesh): enforce unitarity?
+    # mm = np.array([[ue1, ue2, ue3], [um1, um2, um3], [ut1, ut2, ut3]])
+    # if (mm - np.eye(mm.shape[0]) < 1e-1).all():
+    #     pass
+    # else: allow = False
+
+
     if allow: return 0.
     else: return -np.inf
 
@@ -128,7 +134,7 @@ def main():
     burnin = args.burnin
     betas = np.array([1e0, 1e-1, 1e-2, 1e-3, 1e-4])
     p0_base = [0.82, 0.55, 0.14, 0.40, 0.50, 0.65, 0.40, 0.60, 0.65, 0.5, 0.5]
-    p0_std = [0.01, 0.01, 0.001, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.1, 0.1]
+    p0_std = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.1, 0.1]
 
     p0 = np.random.normal(p0_base, p0_std, size=[ntemps, nwalkers, ndim])
     print map(lnprior, p0[0])
@@ -153,6 +159,7 @@ def main():
 
     samples = sampler.chain[0, :, :, :].reshape((-1, ndim))
     print sampler.acceptance_fraction
+    print np.sum(sampler.acceptance_fraction)
     print np.unique(samples[:,0]).shape
 
     np.save(args.outfile, samples)
