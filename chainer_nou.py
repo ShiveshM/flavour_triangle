@@ -17,11 +17,15 @@ font = {'family' : 'serif',
         'weight' : 'bold',
         'size'   : 18}
 
-labels=[r's_{12}^2', r'c_{13}^4', r's_{23}^2', r'\delta_{CP}', r'\phi_e',
-        r'\phi_\mu']
+labels=[r'\mid U_{e1} \mid', r'\mid U_{e2} \mid', r'\mid U_{e3} \mid', \
+        r'\mid U_{\mu1} \mid', r'\mid U_{\mu2} \mid', r'\mid U_{\mu3} \mid', \
+        r'\mid U_{\tau1} \mid', r'\mid U_{\tau2} \mid', r'\mid U_{\tau3} \mid', \
+        r'\phi_e', r'\phi_\mu']
 print labels
 
-ranges = [(0, 1), (0, 1), (0, 1), (0, 2*np.pi), (0, 1), (0, 1)]
+ranges = []
+for x in xrange(len(labels)):
+    ranges.append([0, 1])
 
 Tchain = np.load('/data/mandalia/flavour_ratio/data/mcmc_chain.npy')
 # Tchain = np.load('./data/mcmc_chain.npy')

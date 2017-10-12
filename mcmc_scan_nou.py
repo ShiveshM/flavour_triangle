@@ -19,31 +19,9 @@ BESTFIT = [0.5, 0.5, 0.0]
 SIGMA = 0.2
 
 
-def angles_to_u(angles):
-    s12_2, c13_4, s23_2, dcp = angles
-    dcp = np.complex128(dcp)
-
-    c13_2 = np.sqrt(c13_4)
-
-    c12 = np.sqrt(1. - s12_2)
-    s12 = np.sqrt(s12_2)
-    c13 = np.sqrt(c13_2)
-    s13 = np.sqrt(1. - c13_2)
-    c23 = np.sqrt(1. - s23_2)
-    s23 = np.sqrt(s23_2)
-
-    phase = np.exp(-1*dcp)
-    p1 = np.array([[1   , 0   , 0]         , [0    , c23 , s23] , [0          , -s23 , c23]])
-    p2 = np.array([[c13 , 0   , s13*phase] , [0    , 1   , 0]   , [-s13*phase , 0    , c13]])
-    p3 = np.array([[c12 , s12 , 0]         , [-s12 , c12 , 0]   , [0          , 0    , 1]])
-
-    # u = np.dot(p1, p2, p3)
-    u = np.dot(np.dot(p1, p2), p3)
-    return u
-
-
-def u_to_fr(initial_fr, matrix):
+def u_to_fr(initial_fr, mm_params):
     """Compute the observed flavour ratio assuming decoherence."""
+    matrix = np.array(mm_params).reshape(3, 3)
     composition = np.einsum(
         'ai, bi, a -> b', abs(matrix)**2, abs(matrix)**2, initial_fr
     )
@@ -56,8 +34,7 @@ def triangle_llh(theta):
     fr1, fr2 = theta[-2:]
     fr3 = 1.0 - (fr1 + fr2)
 
-    u = angles_to_u(theta[:-2])
-    fr = u_to_fr((fr1, fr2, fr3), u)
+    fr = u_to_fr((fr1, fr2, fr3), theta[:-2])
     fr_bf = BESTFIT
     cov_fr = np.identity(3) * SIGMA
     return -np.log10(multivariate_normal.pdf(fr, mean=fr_bf, cov=cov_fr))
@@ -65,29 +42,36 @@ def triangle_llh(theta):
 
 def lnprior(theta):
     """Priors on theta."""
-    s12_2, c13_4, s23_2, dcp, fr1, fr2 = theta
+    ue1, ue2, ue3, um1, um2, um3, ut1, ut2, ut3, fr1, fr2 = theta
 
     fr3 = 1.0 - (fr1 + fr2)
 
     allow = True
-
     # Flavour ratio bounds
     if 0. <= fr1 <= 1.0 and 0. <= fr2 <= 1.0 and 0. <= fr3 <= 1.0:
         pass
     else: allow = False
 
-    # Mixing angle bounds
-    if 0. <= s12_2 <= 1. and 0. <= c13_4 <= 1. and 0. <= s23_2 <= 1. \
-       and 0. <= dcp <= 2*np.pi:
+    # Mixing elements 3sigma bound from nufit
+    if 0.800 <= ue1 <= 0.844 and 0.515 <= ue2 <= 0.581 and 0.139 <= ue3 <= 0.155 \
+    and 0.229 <= um1 <= 0.516 and 0.438 <= um2 <= 0.699 and 0.614 <= um3 <= 0.790 \
+    and 0.249 <= ut1 <= 0.528 and 0.462 <= ut2 <= 0.715 and 0.595 <= ut3 <= 0.776:
         pass
     else: allow = False
 
-    # Mixing elements 3sigma bound from nufit
-    # if 0.800 <= ue1 <= 0.844 and 0.515 <= ue2 <= 0.581 and 0.139 <= ue3 <= 0.155 \
-    # and 0.229 <= um1 <= 0.516 and 0.438 <= um2 <= 0.699 and 0.614 <= um3 <= 0.790 \
-    # and 0.249 <= ut1 <= 0.528 and 0.462 <= ut2 <= 0.715 and 0.595 <= ut3 <= 0.776:
+    # Mixing element wide boundary
+    # if 0.0 <= ue1 <= 1.0 and 0.0 <= ue2 <= 1.0 and 0.0 <= ue3 <= 1.0 \
+    # and 0.0 <= um1 <= 1.0 and 0.0 <= um2 <= 1.0 and 0.0 <= um3 <= 1.0 \
+    # and 0.0 <= ut1 <= 1.0 and 0.0 <= ut2 <= 1.0 and 0.0 <= ut3 <= 1.0:
     #     pass
     # else: allow = False
+
+    # TODO(shivesh): enforce unitarity?
+    # mm = np.array([[ue1, ue2, ue3], [um1, um2, um3], [ut1, ut2, ut3]])
+    # if (mm - np.eye(mm.shape[0]) < 1e-1).all():
+    #     pass
+    # else: allow = False
+
 
     if allow: return 0.
     else: return -np.inf
@@ -144,19 +128,18 @@ def main():
     BESTFIT = np.array(args.bestfit_ratio) / float(np.sum(args.bestfit_ratio))
     SIGMA = args.sigma_ratio
 
-    ndim = 6
+    ndim = 11
     nwalkers = args.nwalkers
     ntemps = 1
     burnin = args.burnin
     betas = np.array([1e0, 1e-1, 1e-2, 1e-3, 1e-4])
-    p0_base = [0.5, 0.5, 0.5, np.pi, 0.5, 0.5]
-    p0_std = [0.1] * ndim
+    p0_base = [0.82, 0.55, 0.14, 0.40, 0.50, 0.65, 0.40, 0.60, 0.65, 0.5, 0.5]
+    p0_std = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.1, 0.1]
 
     p0 = np.random.normal(p0_base, p0_std, size=[ntemps, nwalkers, ndim])
     print map(lnprior, p0[0])
 
-    # threads = multiprocessing.cpu_count()
-    threads = 1
+    threads = multiprocessing.cpu_count()
     sampler = emcee.PTSampler(
         ntemps, nwalkers, ndim, triangle_llh, lnprior, threads=threads
     )
