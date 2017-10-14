@@ -19,6 +19,11 @@ BESTFIT = [0.5, 0.5, 0.0]
 SIGMA = 0.2
 
 
+def test_uni(x):
+    """Test the unitarity of a matrix."""
+    print 'Unitarity test:\n{0}'.format(abs(np.dot(x, x.conj().T)))
+
+
 def angles_to_u(angles):
     s12_2, c13_4, s23_2, dcp = angles
     dcp = np.complex128(dcp)
@@ -32,12 +37,11 @@ def angles_to_u(angles):
     c23 = np.sqrt(1. - s23_2)
     s23 = np.sqrt(s23_2)
 
-    phase = np.exp(-1*dcp)
-    p1 = np.array([[1   , 0   , 0]         , [0    , c23 , s23] , [0          , -s23 , c23]])
-    p2 = np.array([[c13 , 0   , s13*phase] , [0    , 1   , 0]   , [-s13*phase , 0    , c13]])
-    p3 = np.array([[c12 , s12 , 0]         , [-s12 , c12 , 0]   , [0          , 0    , 1]])
+    phase = np.exp(-1j*dcp)
+    p1 = np.array([[1   , 0   , 0]         , [0    , c23 , s23] , [0          , -s23 , c23]] , dtype=np.complex128)
+    p2 = np.array([[c13 , 0   , s13*phase] , [0    , 1   , 0]   , [-s13*phase , 0    , c13]] , dtype=np.complex128)
+    p3 = np.array([[c12 , s12 , 0]         , [-s12 , c12 , 0]   , [0          , 0    , 1]]   , dtype=np.complex128)
 
-    # u = np.dot(p1, p2, p3)
     u = np.dot(np.dot(p1, p2), p3)
     return u
 
@@ -69,28 +73,41 @@ def lnprior(theta):
 
     fr3 = 1.0 - (fr1 + fr2)
 
-    allow = True
-
     # Flavour ratio bounds
     if 0. <= fr1 <= 1.0 and 0. <= fr2 <= 1.0 and 0. <= fr3 <= 1.0:
         pass
-    else: allow = False
+    else: return -np.inf
 
     # Mixing angle bounds
     if 0. <= s12_2 <= 1. and 0. <= c13_4 <= 1. and 0. <= s23_2 <= 1. \
        and 0. <= dcp <= 2*np.pi:
         pass
-    else: allow = False
+    else: return -np.inf
+
+    u = angles_to_u(theta[:-2])
+    a_u = abs(u)
+    ue1 = a_u[0][0]
+    ue2 = a_u[0][1]
+    ue3 = a_u[0][2]
+    um1 = a_u[1][0]
+    um2 = a_u[1][1]
+    um3 = a_u[1][2]
+    ut1 = a_u[2][0]
+    ut2 = a_u[2][1]
+    ut3 = a_u[2][2]
+
+    # test_uni(u)
+    # print a_u
 
     # Mixing elements 3sigma bound from nufit
-    # if 0.800 <= ue1 <= 0.844 and 0.515 <= ue2 <= 0.581 and 0.139 <= ue3 <= 0.155 \
-    # and 0.229 <= um1 <= 0.516 and 0.438 <= um2 <= 0.699 and 0.614 <= um3 <= 0.790 \
-    # and 0.249 <= ut1 <= 0.528 and 0.462 <= ut2 <= 0.715 and 0.595 <= ut3 <= 0.776:
-    #     pass
-    # else: allow = False
+    if 0.800 <= ue1 <= 0.844 and 0.515 <= ue2 <= 0.581 and 0.139 <= ue3 <= 0.155 \
+    and 0.229 <= um1 <= 0.516 and 0.438 <= um2 <= 0.699 and 0.614 <= um3 <= 0.790 \
+    and 0.249 <= ut1 <= 0.528 and 0.462 <= ut2 <= 0.715 and 0.595 <= ut3 <= 0.776:
+        pass
+    else:
+        return -np.inf
 
-    if allow: return 0.
-    else: return -np.inf
+    return 0.
 
 
 def lnprob(theta):
@@ -149,14 +166,16 @@ def main():
     ntemps = 1
     burnin = args.burnin
     betas = np.array([1e0, 1e-1, 1e-2, 1e-3, 1e-4])
-    p0_base = [0.5, 0.5, 0.5, np.pi, 0.5, 0.5]
-    p0_std = [0.1] * ndim
+    # p0_base = [0.5, 0.5, 0.5, np.pi, 0.5, 0.5]
+    # p0_std = [0.2] * ndim
+    p0_base = [0.306, 0.958, 0.441, 2*np.pi, 0.5, 0.5]
+    p0_std = [0.005, 0.001, 0.01, 0.5, 0.2, 0.2]
 
     p0 = np.random.normal(p0_base, p0_std, size=[ntemps, nwalkers, ndim])
     print map(lnprior, p0[0])
 
-    # threads = multiprocessing.cpu_count()
-    threads = 1
+    threads = multiprocessing.cpu_count()
+    # threads = 1
     sampler = emcee.PTSampler(
         ntemps, nwalkers, ndim, triangle_llh, lnprior, threads=threads
     )

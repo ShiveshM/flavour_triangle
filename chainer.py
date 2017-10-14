@@ -26,9 +26,12 @@ labels=[r'\mid U_{e1} \mid', r'\mid U_{e2} \mid', r'\mid U_{e3} \mid', \
 print labels
 
 # ranges = [(0, 1), (0, 1), (0, 1), (0, 2*np.pi), (0, 1), (0, 1)]
-ranges = []
-for x in xrange(len(labels)):
-    ranges.append([0, 1])
+# ranges = []
+# for x in xrange(len(labels)):
+#     ranges.append([0, 1])
+ranges = [(0.800, 0.844), (0.515, 0.581), (0.139, 0.155), (0.229, 0.516),
+          (0.438, 0.699), (0.614, 0.790), (0.249, 0.528), (0.462, 0.715),
+          (0.595, 0.776), (0, 1), (0, 1)]
 
 
 def angles_to_u(angles):
@@ -44,17 +47,17 @@ def angles_to_u(angles):
     c23 = np.sqrt(1. - s23_2)
     s23 = np.sqrt(s23_2)
 
-    phase = np.exp(-1*dcp)
-    p1 = np.array([[1   , 0   , 0]         , [0    , c23 , s23] , [0          , -s23 , c23]])
-    p2 = np.array([[c13 , 0   , s13*phase] , [0    , 1   , 0]   , [-s13*phase , 0    , c13]])
-    p3 = np.array([[c12 , s12 , 0]         , [-s12 , c12 , 0]   , [0          , 0    , 1]])
+    phase = np.exp(-1j*dcp)
+    p1 = np.array([[1   , 0   , 0]         , [0    , c23 , s23] , [0          , -s23 , c23]] , dtype=np.complex128)
+    p2 = np.array([[c13 , 0   , s13*phase] , [0    , 1   , 0]   , [-s13*phase , 0    , c13]] , dtype=np.complex128)
+    p3 = np.array([[c12 , s12 , 0]         , [-s12 , c12 , 0]   , [0          , 0    , 1]]   , dtype=np.complex128)
 
     # u = np.dot(p1, p2, p3)
     u = abs(np.dot(np.dot(p1, p2), p3)).astype(np.float32)
     return u.flatten().tolist()
 
 
-raw = np.load('/data/mandalia/flavour_ratio/data/mcmc_chain.npy')
+raw = np.load('/data/mandalia/flavour_ratio/data/mcmc_chain_nufit.npy')
 angles = np.array(map(angles_to_u, raw[:,:-2]))
 Tchain = np.hstack([angles, raw[:,-2:]])
 
@@ -75,5 +78,5 @@ g.settings.figure_legend_frame = False
 g.triangle_plot(
     [Tsample], filled=True, legend_loc="upper right"
 )
-g.export("fr_posterior.pdf")
+g.export("fr_posterior_nufit.pdf")
 print "DONE!"
