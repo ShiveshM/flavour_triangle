@@ -125,6 +125,8 @@ def main():
 
     np.random.seed(args.seed)
 
+    global BESTFIT
+    global SIGMA
     BESTFIT = np.array(args.bestfit_ratio) / float(np.sum(args.bestfit_ratio))
     SIGMA = args.sigma_ratio
 
