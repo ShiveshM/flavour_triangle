@@ -38,7 +38,7 @@ print p.shape
 p = p[p[:,-1] > 0]
 
 cov_fr = np.identity(3) * SIGMA
-llh = -np.log10(multivariate_normal.pdf(p, mean=BESTFIT, cov=cov_fr))
+llh = np.log10(multivariate_normal.pdf(p, mean=BESTFIT, cov=cov_fr))
 print llh
 print llh.shape
 
