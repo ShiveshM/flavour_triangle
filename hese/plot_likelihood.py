@@ -24,9 +24,17 @@ def cartesian(arrays, out=None):
             out[j*m:(j+1)*m,1:] = out[0:m,1:]
     return out
 
-ls = np.linspace(0, 1, 100)
-p = cartesian((ls, ls, ls))
+ls = np.linspace(0, 1, 1000)
+p = cartesian((ls, ls))
 print p.shape
+
+def tc(x):
+    return 1. - x[0] - x[1]
+print np.array(map(tc, p))
+print np.array(map(tc, p)).shape
+p = np.column_stack([p, np.array(map(tc, p))])
+print p.shape
+
 
 cov_fr = np.identity(3) * SIGMA
 llh = -np.log10(multivariate_normal.pdf(p, mean=BESTFIT, cov=cov_fr))

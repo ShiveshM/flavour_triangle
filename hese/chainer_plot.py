@@ -58,6 +58,7 @@ def plot(infile, angles, nufit, outfile, bestfit_ratio=None, sigma_ratio=None):
     raw = np.load(infile)
     if not angles:
         m_elements = np.array(map(flat_angles_to_u, raw[:,:-2]))
+        # TODO(shivesh): column_stack?
         Tchain = np.hstack([m_elements, raw[:,-2:]])
     else:
         Tchain = raw
