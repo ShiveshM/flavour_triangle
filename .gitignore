@@ -3,3 +3,6 @@ untitled.txt
 *.npy
 nohup.out
 *.pyc
+wrap.sh.*
+wrap_ifr.sh.*
+*.nfs*

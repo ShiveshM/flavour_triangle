@@ -77,7 +77,7 @@ def plot(infile, angles, nufit, outfile, hypothesis_ratio=None, bestfit_ratio=No
     g.triangle_plot(
         [Tsample], filled=True
     )
-    mpl.pyplot.figtext(0.5, 0.7, label, fontsize=10)
+    mpl.pyplot.figtext(0.6, 0.7, label, fontsize=10)
     print 'outfile = {0}'.format(outfile)
     g.export(outfile)
 

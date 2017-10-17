@@ -180,6 +180,9 @@ def main():
         NUFIT = False
     else:
         raise ValueError
+    print 'BESTFIT = {0}'.format(BESTFIT)
+    print 'SIGMA = {0}'.format(SIGMA)
+    print 'NUFIT = {0}'.format(NUFIT)
 
     ndim = 6
     nwalkers = args.nwalkers

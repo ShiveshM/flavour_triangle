@@ -147,6 +147,11 @@ def main():
 
     HYPO = np.array(args.hypothesis_ratio) / float(np.sum(args.hypothesis_ratio))
 
+    print 'HYPO = {0}'.format(HYPO)
+    print 'BESTFIT = {0}'.format(BESTFIT)
+    print 'SIGMA = {0}'.format(SIGMA)
+    print 'NUFIT = {0}'.format(NUFIT)
+
     ndim = 4
     nwalkers = args.nwalkers
     ntemps = 1
