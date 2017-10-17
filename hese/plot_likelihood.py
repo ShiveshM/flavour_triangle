@@ -35,6 +35,7 @@ print np.array(map(tc, p)).shape
 p = np.column_stack([p, np.array(map(tc, p))])
 print p.shape
 
+p = p[p[:,-1] > 0]
 
 cov_fr = np.identity(3) * SIGMA
 llh = -np.log10(multivariate_normal.pdf(p, mean=BESTFIT, cov=cov_fr))
@@ -50,7 +51,7 @@ print np.sum(mask)
 
 p_mask = p[mask]
 
-with open('llh.txt', 'w') as f:
+with open('llh_020.txt', 'w') as f:
     for frs in p_mask:
         for fr in frs:
             f.write('{0:.6f} '.format(fr))
