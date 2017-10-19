@@ -20,8 +20,8 @@ import tqdm
 import chainer_plot
 
 
-BESTFIT = [1, 0, 0]
-SIGMA = 0.2
+BESTFIT = [1, 1, 1]
+SIGMA = 0.01
 NUFIT = False
 
 
@@ -29,24 +29,46 @@ def test_uni(x):
     """Test the unitarity of a matrix."""
     print 'Unitarity test:\n{0}'.format(abs(np.dot(x, x.conj().T)))
 
+def angles_to_fr(angles):
+    sphi4, c2psi = angles
+
+    psi = (0.5)*np.arccos(c2psi)
+
+    sphi2 = np.sqrt(sphi4)
+    cphi2 = 1. - sphi2
+    spsi2 = np.sin(psi)**2
+    cspi2 = 1. - spsi2
+
+    x = sphi2*cspi2
+    y = sphi2*spsi2
+    z = cphi2
+    return x, y, z
+
 
 def angles_to_u(angles):
     s12_2, c13_4, s23_2, dcp = angles
     dcp = np.complex128(dcp)
 
+    c12_2 = 1. - s12_2
     c13_2 = np.sqrt(c13_4)
+    s13_2 = 1. - c13_2
+    c23_2 = 1. - s23_2
 
-    c12 = np.sqrt(1. - s12_2)
-    s12 = np.sqrt(s12_2)
-    c13 = np.sqrt(c13_2)
-    s13 = np.sqrt(1. - c13_2)
-    c23 = np.sqrt(1. - s23_2)
-    s23 = np.sqrt(s23_2)
+    # TODO(shivesh): negative sign?
+    t12 = np.arcsin(np.sqrt(s12_2))
+    t13 = np.arccos(np.sqrt(c13_2))
+    t23 = np.arcsin(np.sqrt(s23_2))
 
-    phase = np.exp(-1j*dcp)
-    p1 = np.array([[1   , 0   , 0]         , [0    , c23 , s23] , [0          , -s23 , c23]] , dtype=np.complex128)
-    p2 = np.array([[c13 , 0   , s13*phase] , [0    , 1   , 0]   , [-s13*phase , 0    , c13]] , dtype=np.complex128)
-    p3 = np.array([[c12 , s12 , 0]         , [-s12 , c12 , 0]   , [0          , 0    , 1]]   , dtype=np.complex128)
+    c12 = np.cos(t12)
+    s12 = np.sin(t12)
+    c13 = np.cos(t13)
+    s13 = np.sin(t13)
+    c23 = np.cos(t23)
+    s23 = np.sin(t23)
+
+    p1 = np.array([[1   , 0   , 0]                   , [0    , c23 , s23] , [0                   , -s23 , c23]] , dtype=np.complex128)
+    p2 = np.array([[c13 , 0   , s13*np.exp(-1j*dcp)] , [0    , 1   , 0]   , [-s13*np.exp(1j*dcp) , 0    , c13]] , dtype=np.complex128)
+    p3 = np.array([[c12 , s12 , 0]                   , [-s12 , c12 , 0]   , [0                   , 0    , 1]]   , dtype=np.complex128)
 
     u = np.dot(np.dot(p1, p2), p3)
     return u
@@ -54,6 +76,7 @@ def angles_to_u(angles):
 
 def u_to_fr(initial_fr, matrix):
     """Compute the observed flavour ratio assuming decoherence."""
+    # TODO(shivesh): energy dependence
     composition = np.einsum(
         'ai, bi, a -> b', abs(matrix)**2, abs(matrix)**2, initial_fr
     )
@@ -63,24 +86,21 @@ def u_to_fr(initial_fr, matrix):
 
 def triangle_llh(theta):
     """-Log likelihood function for a given theta."""
-    fr1, fr2 = theta[-2:]
-    fr3 = 1.0 - (fr1 + fr2)
+    fr1, fr2, fr3 = angles_to_fr(theta[-2:])
 
     u = angles_to_u(theta[:-2])
     fr = u_to_fr((fr1, fr2, fr3), u)
     fr_bf = BESTFIT
     cov_fr = np.identity(3) * SIGMA
-    return -np.log10(multivariate_normal.pdf(fr, mean=fr_bf, cov=cov_fr))
+    return np.log(multivariate_normal.pdf(fr, mean=fr_bf, cov=cov_fr))
 
 
 def lnprior(theta):
     """Priors on theta."""
-    s12_2, c13_4, s23_2, dcp, fr1, fr2 = theta
-
-    fr3 = 1.0 - (fr1 + fr2)
+    s12_2, c13_4, s23_2, dcp, sphi4, c2psi = theta
 
     # Flavour ratio bounds
-    if 0. <= fr1 <= 1.0 and 0. <= fr2 <= 1.0 and 0. <= fr3 <= 1.0:
+    if 0. <= sphi4 <= 1.0 and -1.0 <= c2psi <= 1.0:
         pass
     else: return -np.inf
 
@@ -102,9 +122,6 @@ def lnprior(theta):
         ut1 = a_u[2][0]
         ut2 = a_u[2][1]
         ut3 = a_u[2][2]
-
-        # test_uni(u)
-        # print a_u
 
         # Mixing elements 3sigma bound from nufit
         if 0.800 <= ue1 <= 0.844 and 0.515 <= ue2 <= 0.581 and 0.139 <= ue3 <= 0.155 \
@@ -129,11 +146,11 @@ def parse_args():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        '--bestfit-ratio', type=int, nargs=3, default=[1, 0, 0],
+        '--bestfit-ratio', type=int, nargs=3, default=[1, 1, 1],
         help='Set the bestfit flavour ratio'
     )
     parser.add_argument(
-        '--sigma-ratio', type=float, default=0.2,
+        '--sigma-ratio', type=float, default=0.01,
         help='Set the 1 sigma for the flavour ratio'
     )
     parser.add_argument(
@@ -190,9 +207,10 @@ def main():
     burnin = args.burnin
     betas = np.array([1e0, 1e-1, 1e-2, 1e-3, 1e-4])
     if not NUFIT:
-        p0_base = [0.5, 0.5, 0.5, np.pi, 0.5, 0.5]
+        p0_base = [0.5, 0.5, 0.5, np.pi, 0.5, 0.0]
         p0_std = [0.2] * ndim
     else:
+        assert 0
         p0_base = [0.306, 0.958, 0.441, 2*np.pi, 0.5, 0.5]
         p0_std = [0.005, 0.001, 0.01, 0.5, 0.2, 0.2]
 
@@ -223,8 +241,8 @@ def main():
     print np.sum(sampler.acceptance_fraction)
     print np.unique(samples[:,0]).shape
 
-    outfile = args.outfile+'_{0:03d}_{1:03d}_{2:03d}_{3:03d}'.format(
-        int(BESTFIT[0]*100), int(BESTFIT[1]*100), int(BESTFIT[2]*100), int(SIGMA*100)
+    outfile = args.outfile+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}'.format(
+        int(BESTFIT[0]*100), int(BESTFIT[1]*100), int(BESTFIT[2]*100), int(SIGMA*1000)
     )
     if NUFIT:
         outfile += '_nufit'
@@ -233,17 +251,17 @@ def main():
     print "Making triangle plots"
     chainer_plot.plot(
         infile=outfile+'.npy',
-        angles=False,
+        angles=True,
         nufit=NUFIT,
-        outfile=outfile+'.pdf',
+        outfile=outfile+'_angles.pdf',
         bestfit_ratio=BESTFIT,
         sigma_ratio=SIGMA
     )
     chainer_plot.plot(
         infile=outfile+'.npy',
-        angles=True,
+        angles=False,
         nufit=NUFIT,
-        outfile=outfile+'_angles.pdf',
+        outfile=outfile+'.pdf',
         bestfit_ratio=BESTFIT,
         sigma_ratio=SIGMA
     )

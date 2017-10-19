@@ -15,10 +15,13 @@ e_ifr=(1 1 1)
 # )
 m_a=(
 e_ifr[@]
+a_ifr[@]
 b_ifr[@]
+c_ifr[@]
+d_ifr[@]
 )
 
-sigma=0.2
+sigma=0.001
 nsteps=2000
 outfile=/data/mandalia/flavour_ratio/data/mcmc_chain
 
@@ -35,11 +38,11 @@ for ((i=0; i<$count; i++)); do
     # qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/wrap_ifr.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} ${arg[0]} ${arg[1]} ${arg[2]} ${nsteps} False ${outfile}
     # qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/wrap_ifr.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} ${arg[0]} ${arg[1]} ${arg[2]} ${nsteps} True ${outfile}
 
-    for ((j=0; j<$count; j++)); do
-        brg=${!m_a[j]}
+    # for ((j=0; j<$count; j++)); do
+    #     brg=${!m_a[j]}
 	# qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/wrap_ifr.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} ${brg[0]} ${brg[1]} ${brg[2]} ${nsteps} False ${outfile}
 	# /users/mandalia/Documents/flavour_triangle/hese/wrap_ifr.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} ${brg[0]} ${brg[1]} ${brg[2]} ${nsteps} True ${outfile}
-    done
+    # done
 
-    break
+    # break
 done

@@ -38,14 +38,14 @@ print p.shape
 p = p[p[:,-1] > 0]
 
 cov_fr = np.identity(3) * SIGMA
-llh = -np.log10(multivariate_normal.pdf(p, mean=BESTFIT, cov=cov_fr))
+llh = -np.log(multivariate_normal.pdf(p, mean=BESTFIT, cov=cov_fr))
 print llh
 print llh.shape
 
-rndm = np.random.uniform(np.min(llh), np.max(llh), size=len(llh))
+rndm = np.random.uniform(0, 65, size=len(llh))
 print rndm
 
-mask = (llh > rndm)
+mask = (llh < rndm)
 print mask
 print np.sum(mask)
 

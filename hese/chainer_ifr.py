@@ -54,7 +54,7 @@ def plot(infile, angles, nufit, outfile, hypothesis_ratio=None, bestfit_ratio=No
         Tchain = raw
 
     if hypothesis_ratio is not None and bestfit_ratio is not None and sigma_ratio is not None:
-        label = 'Hypothesis ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nBestfit ratio = [{3:.2f}, {4:.2f}, {5:.2f}]\nSigma = {6:.2f}'.format(
+        label = 'Hypothesis ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nBestfit ratio = [{3:.2f}, {4:.2f}, {5:.2f}]\nSigma = {6:.3f}'.format(
             hypothesis_ratio[0], hypothesis_ratio[1], hypothesis_ratio[2],
             bestfit_ratio[0], bestfit_ratio[1], bestfit_ratio[2], sigma_ratio
         )

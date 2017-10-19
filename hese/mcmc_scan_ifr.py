@@ -21,9 +21,9 @@ from mcmc_scan import test_uni, angles_to_u, u_to_fr
 import chainer_ifr
 
 
-BESTFIT = [1, 0, 0]
-SIGMA = 0.2
-HYPO = [1, 0, 0]
+BESTFIT = [1, 1, 1]
+SIGMA = 0.01
+HYPO = [2, 1, 0]
 NUFIT = False
 
 
@@ -35,8 +35,9 @@ def triangle_llh(theta):
     fr = u_to_fr((fr1, fr2, fr3), u)
     fr_bf = BESTFIT
     cov_fr = np.identity(3) * SIGMA
-    llh = np.log10(multivariate_normal.pdf(fr, mean=fr_bf, cov=cov_fr))
-    return -llh
+    # TODO(shivesh): natural log?
+    return np.log(multivariate_normal.pdf(fr, mean=fr_bf, cov=cov_fr))
+    # return -np.log10(multivariate_normal.pdf(fr, mean=fr_bf, cov=cov_fr))
 
 
 def lnprior(theta):
@@ -89,15 +90,15 @@ def parse_args():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        '--bestfit-ratio', type=int, nargs=3, default=[1, 0, 0],
+        '--bestfit-ratio', type=int, nargs=3, default=[1, 1, 1],
         help='Set the bestfit flavour ratio'
     )
     parser.add_argument(
-        '--sigma-ratio', type=float, default=0.2,
+        '--sigma-ratio', type=float, default=0.01,
         help='Set the 1 sigma for the flavour ratio'
     )
     parser.add_argument(
-        '--hypothesis-ratio', type=int, nargs=3, default=[1, 0, 0],
+        '--hypothesis-ratio', type=int, nargs=3, default=[2, 1, 0],
         help='Set the hypothesis for the flavour ratio'
     )
     parser.add_argument(
@@ -191,8 +192,8 @@ def main():
     print np.sum(sampler.acceptance_fraction)
     print np.unique(samples[:,0]).shape
 
-    outfile = args.outfile+'_{0:03d}_{1:03d}_{2:03d}_{3:03d}_ifr_{4:03d}_{5:03d}_{6:03d}'.format(
-        int(BESTFIT[0]*100), int(BESTFIT[1]*100), int(BESTFIT[2]*100), int(SIGMA*100),
+    outfile = args.outfile+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}_ifr_{4:03d}_{5:03d}_{6:03d}'.format(
+        int(BESTFIT[0]*100), int(BESTFIT[1]*100), int(BESTFIT[2]*100), int(SIGMA*1000),
         int(HYPO[0]*100), int(HYPO[1]*100), int(HYPO[2]*100)
     )
     if NUFIT:

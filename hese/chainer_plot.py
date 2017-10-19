@@ -35,36 +35,38 @@ def plot(infile, angles, nufit, outfile, bestfit_ratio=None, sigma_ratio=None):
         labels = [r'\mid U_{e1} \mid', r'\mid U_{e2} \mid', r'\mid U_{e3} \mid', \
                   r'\mid U_{\mu1} \mid', r'\mid U_{\mu2} \mid', r'\mid U_{\mu3} \mid', \
                   r'\mid U_{\tau1} \mid', r'\mid U_{\tau2} \mid', r'\mid U_{\tau3} \mid', \
-                  r'\phi_e', r'\phi_\mu']
+                  r'\phi_e', r'\phi_\mu', r'\phi_\tau']
     else:
-        labels=[r's_{12}^2', r'c_{13}^4', r's_{23}^2', r'\delta_{CP}', r'\phi_e',
-                r'\phi_\mu']
+        labels=[r's_{12}^2', r'c_{13}^4', r's_{23}^2', r'\delta_{CP}',
+                r'sin^4(\phi)', r'cos(2\psi)']
     print labels
 
     if not angles and nufit:
+        assert 0
         ranges = [(0.800, 0.844), (0.515, 0.581), (0.139, 0.155), (0.229, 0.516),
                   (0.438, 0.699), (0.614, 0.790), (0.249, 0.528), (0.462, 0.715),
-                  (0.595, 0.776), (0, 1), (0, 1)]
+                  # (0.595, 0.776), (0, 1), (0, 1)]
+                  (0.595, 0.776), (0, 1), (0, 1), (0, 1)]
     elif not angles:
         ranges = []
         for x in xrange(len(labels)):
             ranges.append([0, 1])
     else:
-        ranges = [(0, 1), (0, 1), (0, 1), (0, 2*np.pi), (0, 1), (0, 1)]
+        ranges = [(0, 1), (0, 1), (0, 1), (0, 2*np.pi), (0, 1), (-1, 1)]
 
     def flat_angles_to_u(x):
         return abs(mcmc_scan.angles_to_u(x)).astype(np.float32).flatten().tolist()
 
     raw = np.load(infile)
     if not angles:
+        fr_elements = np.array(map(mcmc_scan.angles_to_fr, raw[:,-2:]))
         m_elements = np.array(map(flat_angles_to_u, raw[:,:-2]))
-        # TODO(shivesh): column_stack?
-        Tchain = np.hstack([m_elements, raw[:,-2:]])
+        Tchain = np.column_stack([m_elements, fr_elements])
     else:
         Tchain = raw
 
     if bestfit_ratio is not None and sigma_ratio is not None:
-        label = 'Bestfit ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nSigma = {3:.2f}'.format(
+        label = 'Bestfit ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nSigma = {3:.3f}'.format(
             bestfit_ratio[0], bestfit_ratio[1], bestfit_ratio[2], sigma_ratio
         )
     else:
