@@ -35,8 +35,6 @@ for ((i=0; i<$count; i++)); do
 
     qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} ${nsteps} False ${outfile}
     # qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} ${nsteps} True ${outfile}
-    # qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/wrap_ifr.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} ${arg[0]} ${arg[1]} ${arg[2]} ${nsteps} False ${outfile}
-    # qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/wrap_ifr.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} ${arg[0]} ${arg[1]} ${arg[2]} ${nsteps} True ${outfile}
 
     # for ((j=0; j<$count; j++)); do
     #     brg=${!m_a[j]}
