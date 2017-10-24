@@ -15,10 +15,10 @@ e_ifr=(1 1 1)
 # )
 m_a=(
 e_ifr[@]
-a_ifr[@]
-b_ifr[@]
-c_ifr[@]
-d_ifr[@]
+#a_ifr[@]
+#b_ifr[@]
+#c_ifr[@]
+#d_ifr[@]
 )
 
 sigma=0.001
@@ -30,10 +30,10 @@ for ((i=0; i<$count; i++)); do
     arg=${!m_a[i]}
     echo "${arg[0]} ${arg[1]} ${arg[2]}"
 
-    # /users/mandalia/Documents/flavour_triangle/hese/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} ${nsteps} False ${outfile}
+    /users/mandalia/Documents/flavour_triangle/hese/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} ${nsteps} False ${outfile}
     # break
 
-    qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} ${nsteps} False ${outfile}
+    # qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} ${nsteps} False ${outfile}
     # qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} ${nsteps} True ${outfile}
 
     # for ((j=0; j<$count; j++)); do
