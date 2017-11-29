@@ -21,6 +21,7 @@ from mcmc_scan import test_uni, angles_to_u, u_to_fr
 import chainer_ifr
 
 
+FLAT = True
 BESTFIT = [1, 1, 1]
 SIGMA = 0.01
 HYPO = [2, 1, 0]
@@ -35,9 +36,12 @@ def triangle_llh(theta):
     fr = u_to_fr((fr1, fr2, fr3), u)
     fr_bf = BESTFIT
     cov_fr = np.identity(3) * SIGMA
-    # TODO(shivesh): natural log?
-    return np.log(multivariate_normal.pdf(fr, mean=fr_bf, cov=cov_fr))
-    # return -np.log10(multivariate_normal.pdf(fr, mean=fr_bf, cov=cov_fr))
+    if FLAT:
+        return 10.
+    else:
+        # TODO(shivesh): natural log?
+        return np.log(multivariate_normal.pdf(fr, mean=fr_bf, cov=cov_fr))
+        # return -np.log10(multivariate_normal.pdf(fr, mean=fr_bf, cov=cov_fr))
 
 
 def lnprior(theta):
@@ -196,6 +200,8 @@ def main():
         int(BESTFIT[0]*100), int(BESTFIT[1]*100), int(BESTFIT[2]*100), int(SIGMA*1000),
         int(HYPO[0]*100), int(HYPO[1]*100), int(HYPO[2]*100)
     )
+    if FLAT:
+        outfile += '_flat'
     if NUFIT:
         outfile += '_nufit'
     np.save(outfile+'.npy', samples)

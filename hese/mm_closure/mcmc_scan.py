@@ -20,6 +20,7 @@ import tqdm
 import chainer_plot
 
 
+FLAT = False
 INJECTED = [2, 1]
 BESTFIT = [1, 1]
 SIGMA = 0.01
@@ -60,7 +61,10 @@ def triangle_llh(angles):
     fr = u_to_fr((fr1, fr2), u)
     fr_bf = BESTFIT
     cov_fr = np.identity(2) * SIGMA
-    return np.log(multivariate_normal.pdf(fr, mean=fr_bf, cov=cov_fr))
+    if FLAT:
+        return 10.
+    else:
+        return np.log(multivariate_normal.pdf(fr, mean=fr_bf, cov=cov_fr))
 
 
 def lnprior(angles):
@@ -149,7 +153,7 @@ def main():
     print 'SIGMA = {0}'.format(SIGMA)
     print 'NUFIT = {0}'.format(NUFIT)
 
-    ANGLES = (1/8.*np.pi, 6/4.*np.pi)
+    ANGLES = (1/4.*np.pi, 1.*np.pi)
     nufit_u = angles_to_u((ANGLES))
     print abs(nufit_u)
     BESTFIT = u_to_fr(INJECTED, nufit_u)
@@ -190,16 +194,20 @@ def main():
     print "Finished"
 
     samples = sampler.chain[0, :, :, :].reshape((-1, ndim))
-    print sampler.acceptance_fraction
-    print np.sum(sampler.acceptance_fraction)
-    print np.unique(samples[:,0]).shape
+    print 'acceptance fraction', sampler.acceptance_fraction
+    print 'sum of acceptance fraction', np.sum(sampler.acceptance_fraction)
+    print 'np.unique(samples[:,0]).shape', np.unique(samples[:,0]).shape
+
+    print 'autocorrelation', sampler.acor
 
     outfile = args.outfile+'_{0:2f}_{1:2f}_{2:03d}_{3:03d}_{4:04d}'.format(
         abs(nufit_u[0][0]), abs(nufit_u[0][1]), int(INJECTED[0]*100), int(INJECTED[1]*100), int(SIGMA*1000)
     )
     if NUFIT:
         outfile += '_nufit'
-    np.save(outfile+'.npy', samples)
+    if FLAT:
+        outfile += '_flat'
+    # np.save(outfile+'.npy', samples)
 
     print "Making triangle plots"
     chainer_plot.plot(

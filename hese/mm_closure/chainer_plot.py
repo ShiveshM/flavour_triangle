@@ -70,6 +70,11 @@ def plot(infile, angles, outfile, injected_ratio=None, hypothesis_ratio=None, si
     Tsample.fine_bins_2D=500
     Tsample.smooth_scale_2D=0.03
 
+    # print infile
+    # stats = Tsample.getLikeStats()
+    # print stats.logLike_sample
+    # print stats
+    # assert 0
     g = plots.getSubplotPlotter()
     g.settings.num_plot_contours = 2
     g.settings.axes_fontsize = 10

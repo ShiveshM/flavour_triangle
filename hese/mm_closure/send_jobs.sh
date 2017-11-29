@@ -20,7 +20,7 @@ c_ifr[@]
 )
 
 sigma=0.001
-nsteps=2000
+nsteps=50000
 outfile=/data/mandalia/flavour_ratio/data/mm_closure/mcmc_chain
 
 count=${#m_a[@]}
