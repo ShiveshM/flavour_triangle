@@ -19,9 +19,6 @@ from getdist import mcsamples
 
 import mcmc_scan
 
-DIMENSION = 6
-ENERGY = 100 # GeV
-
 rc('text', usetex=True)
 rc('font', **{'family':'serif', 'serif':['Computer Modern'], 'size':18})
 cols = ['#29A2C6','#FF6D31','#FFCB18','#73B66B','#EF597B', '#333333']
@@ -31,47 +28,138 @@ font = {'family' : 'serif',
         'size'   : 18}
 
 
-def plot(infile, angles, nufit, outfile, bestfit_ratio=None, sigma_ratio=None):
+def plot(infile, angles, outfile, measured_ratio, sigma_ratio, fix_sfr,
+         fix_mixing, fix_scale, source_ratio, scale, dimension, energy, scale_bounds):
     """Make the triangle plot"""
     if not angles:
-        labels = [r'\mid \tilde{U}_{e1} \mid', r'\mid \tilde{U}_{e2} \mid', r'\mid \tilde{U}_{e3} \mid', \
-                  r'\mid \tilde{U}_{\mu1} \mid', r'\mid \tilde{U}_{\mu2} \mid', r'\mid \tilde{U}_{\mu3} \mid', \
-                  r'\mid \tilde{U}_{\tau1} \mid', r'\mid \tilde{U}_{\tau2} \mid', r'\mid \tilde{U}_{\tau3} \mid', \
-                  r'\Lambda_1', r'\Lambda_2', r'\phi_e', r'\phi_\mu', r'\phi_\tau']
+        if fix_mixing:
+            assert 0
+        if fix_sfr:
+            if fix_scale:
+                labels = [r'\mid \tilde{U}_{e1} \mid', r'\mid \tilde{U}_{e2} \mid', r'\mid \tilde{U}_{e3} \mid', \
+                          r'\mid \tilde{U}_{\mu1} \mid', r'\mid \tilde{U}_{\mu2} \mid', r'\mid \tilde{U}_{\mu3} \mid', \
+                          r'\mid \tilde{U}_{\tau1} \mid', r'\mid \tilde{U}_{\tau2} \mid', r'\mid \tilde{U}_{\tau3} \mid']
+            else:
+                labels = [r'\mid \tilde{U}_{e1} \mid', r'\mid \tilde{U}_{e2} \mid', r'\mid \tilde{U}_{e3} \mid', \
+                          r'\mid \tilde{U}_{\mu1} \mid', r'\mid \tilde{U}_{\mu2} \mid', r'\mid \tilde{U}_{\mu3} \mid', \
+                          r'\mid \tilde{U}_{\tau1} \mid', r'\mid \tilde{U}_{\tau2} \mid', r'\mid \tilde{U}_{\tau3} \mid', \
+                          r'{\rm log}_{10}(\Lambda)']
+        else:
+            if fix_scale:
+                labels = [r'\mid \tilde{U}_{e1} \mid', r'\mid \tilde{U}_{e2} \mid', r'\mid \tilde{U}_{e3} \mid', \
+                          r'\mid \tilde{U}_{\mu1} \mid', r'\mid \tilde{U}_{\mu2} \mid', r'\mid \tilde{U}_{\mu3} \mid', \
+                          r'\mid \tilde{U}_{\tau1} \mid', r'\mid \tilde{U}_{\tau2} \mid', r'\mid \tilde{U}_{\tau3} \mid', \
+                          r'{\rm log}_{10}\Lambda', r'\phi_e', r'\phi_\mu', r'\phi_\tau']
+            else:
+                labels = [r'\mid \tilde{U}_{e1} \mid', r'\mid \tilde{U}_{e2} \mid', r'\mid \tilde{U}_{e3} \mid', \
+                          r'\mid \tilde{U}_{\mu1} \mid', r'\mid \tilde{U}_{\mu2} \mid', r'\mid \tilde{U}_{\mu3} \mid', \
+                          r'\mid \tilde{U}_{\tau1} \mid', r'\mid \tilde{U}_{\tau2} \mid', r'\mid \tilde{U}_{\tau3} \mid', \
+                          r'\phi_e', r'\phi_\mu', r'\phi_\tau']
     else:
-        labels=[r's_{12}^2', r'c_{13}^4', r's_{23}^2', r'\delta_{CP}',
-                r'\Lambda_1', r'\Lambda_2', r'sin^4(\phi)', r'cos(2\psi)']
+        if fix_sfr:
+            if fix_mixing:
+                labels=[r'\tilde{s}_{12}^2', r'{\rm log}_{10}\Lambda']
+            elif fix_scale:
+                labels=[r'\tilde{s}_{12}^2', r'\tilde{c}_{13}^4',
+                        r'\tilde{s}_{23}^2', r'\tilde{\delta_{CP}}']
+            else:
+                labels=[r'\tilde{s}_{12}^2', r'\tilde{c}_{13}^4',
+                        r'\tilde{s}_{23}^2', r'\tilde{\delta_{CP}}',
+                        r'{\rm log}_{10}\Lambda']
+        else:
+            if fix_mixing:
+                labels=[r'\tilde{s}_{12}^2', r'{\rm log}_{10}\Lambda',
+                        r'sin^4(\phi)', r'cos(2\psi)']
+            elif fix_scale:
+                labels=[r'\tilde{s}_{12}^2', r'\tilde{c}_{13}^4',
+                        r'\tilde{s}_{23}^2', r'\tilde{\delta_{CP}}',
+                        r'sin^4(\phi)', r'cos(2\psi)']
+            else:
+                labels=[r'\tilde{s}_{12}^2', r'\tilde{c}_{13}^4',
+                        r'\tilde{s}_{23}^2', r'\tilde{\delta_{CP}}',
+                        r'{\rm log}_{10}\Lambda', r'sin^4(\phi)', r'cos(2\psi)']
     print labels
 
-    if not angles and nufit:
-        assert 0
-        ranges = [(0.800, 0.844), (0.515, 0.581), (0.139, 0.155), (0.229, 0.516),
-                  (0.438, 0.699), (0.614, 0.790), (0.249, 0.528), (0.462, 0.715),
-                  # (0.595, 0.776), (0, 1), (0, 1)]
-                  (0.595, 0.776), (0, 1), (0, 1), (0, 1)]
-    elif not angles:
-        ranges = [(0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (-40, -35), (-40, -35), (0, 1), (0, 1), (0, 1)]
+    if not fix_mixing:
+        s2 = np.log10(scale_bounds)
+
+    if not angles:
+        if fix_sfr:
+            if fix_scale:
+                ranges = [(0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1)]
+            else:
+                ranges = [(0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), s2]
+        else:
+            if fix_scale:
+                ranges = [(0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1)]
+            else:
+                ranges = [(0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), s2, (0, 1), (0, 1), (0, 1)]
     else:
-        ranges = [(0, 1), (0, 1), (0, 1), (0, 2*np.pi), (-40, -35), (-40, -35), (0, 1), (-1, 1)]
+        if fix_sfr:
+            if fix_mixing:
+                ranges = [(0, 1), s2]
+            elif fix_scale:
+                ranges = [(0, 1), (0, 1), (0, 1), (0, 2*np.pi)]
+            else:
+                ranges = [(0, 1), (0, 1), (0, 1), (0, 2*np.pi), s2]
+        else:
+            if fix_mixing:
+                ranges = [(0, 1), s2, (0, 1), (-1, 1)]
+            elif fix_scale:
+                ranges = [(0, 1), (0, 1), (0, 1), (0, 2*np.pi), (0, 1), (-1, 1)]
+            else:
+                ranges = [(0, 1), (0, 1), (0, 1), (0, 2*np.pi), s2, (0, 1), (-1, 1)]
 
     def flat_angles_to_u(x):
         return abs(mcmc_scan.angles_to_u(x)).astype(np.float32).flatten().tolist()
 
     raw = np.load(infile)
+    print 'raw.shape', raw.shape
     if not angles:
-        fr_elements = np.array(map(mcmc_scan.angles_to_fr, raw[:,-2:]))
-	sc_elements = raw[:,-4:-2]
-        m_elements = np.array(map(flat_angles_to_u, raw[:,:-4]))
-        Tchain = np.column_stack([m_elements, sc_elements, fr_elements])
+        if fix_sfr:
+            if fix_scale:
+                Tchain = np.array(map(flat_angles_to_u, raw))
+            else:
+                sc_elements = raw[:,-1:]
+                m_elements = np.array(map(flat_angles_to_u, raw[:,:-1]))
+                Tchain = np.column_stack([m_elements, sc_elements])
+        else:
+            if fix_scale:
+                fr_elements = np.array(map(mcmc_scan.angles_to_fr, raw[:,-2:]))
+                m_elements = np.array(map(flat_angles_to_u, raw[:,:-2]))
+                Tchain = np.column_stack([m_elements, fr_elements])
+            else:
+                fr_elements = np.array(map(mcmc_scan.angles_to_fr, raw[:,-2:]))
+                sc_elements = raw[:,-3:-2]
+                m_elements = np.array(map(flat_angles_to_u, raw[:,:-3]))
+                Tchain = np.column_stack([m_elements, sc_elements, fr_elements])
     else:
         Tchain = raw
 
-    if bestfit_ratio is not None and sigma_ratio is not None:
-        label = 'Bestfit ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nSigma = {3:.3f}\nDimension = {4}\nEnergy = {5} GeV'.format(
-            bestfit_ratio[0], bestfit_ratio[1], bestfit_ratio[2], sigma_ratio, DIMENSION, ENERGY
-        )
+    if fix_sfr:
+        if fix_scale:
+            label = 'Source flavour ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nIC observed flavour ratio = [{3:.2f}, {4:.2f}, {5:.2f}]\nSigma = {6:.3f}\nDimension = {7}\nEnergy = {8} GeV\nScale = {9}'.format(
+                source_ratio[0], source_ratio[1], source_ratio[2],
+                measured_ratio[0], measured_ratio[1], measured_ratio[2], sigma_ratio,
+                dimension, energy, scale
+            )
+        else:
+            label = 'Source flavour ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nIC observed flavour ratio = [{3:.2f}, {4:.2f}, {5:.2f}]\nSigma = {6:.3f}\nDimension = {7}\nEnergy = {8} GeV'.format(
+                source_ratio[0], source_ratio[1], source_ratio[2],
+                measured_ratio[0], measured_ratio[1], measured_ratio[2], sigma_ratio,
+                dimension, energy
+            )
     else:
-        label = None
+        if fix_scale:
+	    label = 'IC observed flavour ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nSigma = {3:.3f}\nDimension = {4}\nEnergy = {5} GeV\nScale = {6}'.format(
+		measured_ratio[0], measured_ratio[1], measured_ratio[2], sigma_ratio,
+		dimension, energy, scale
+	    )
+	else:
+	    label = 'IC observed flavour ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nSigma = {3:.3f}\nDimension = {4}\nEnergy = {5} GeV'.format(
+		measured_ratio[0], measured_ratio[1], measured_ratio[2], sigma_ratio,
+		dimension, energy
+	    )
 
     Tsample = mcsamples.MCSamples(
         samples=Tchain, labels=labels, ranges=ranges
@@ -89,7 +177,10 @@ def plot(infile, angles, nufit, outfile, bestfit_ratio=None, sigma_ratio=None):
     g.triangle_plot(
         [Tsample], filled=True,
     )
-    mpl.pyplot.figtext(0.6, 0.7, label, fontsize=15)
+    if fix_mixing:
+        mpl.pyplot.figtext(0.4, 0.7, label, fontsize=4)
+    else:
+        mpl.pyplot.figtext(0.5, 0.7, label, fontsize=15)
     print 'outfile = {0}'.format(outfile)
     g.export(outfile)
 
@@ -106,10 +197,6 @@ def parse_args():
         help='Plot in terms of mixing angles'
     )
     parser.add_argument(
-        '--nufit', default=False, action='store_true',
-        help='Include NuFit priors'
-    )
-    parser.add_argument(
         '--outfile', type=str, default='./untitled.pdf',
         help='Path to output plot'
     )
@@ -120,6 +207,32 @@ def parse_args():
     parser.add_argument(
         '--sigma-ratio', type=float, required=False,
         help='Set the 1 sigma for the flavour ratio'
+    )
+    parser.add_argument(
+        '--fix-sfr', action='store_true',
+        help='Fix the source flavour ratio'
+    )
+    parser.add_argument(
+        '--fix-mixing', action='store_true',
+        help='Fix the new physics mixing values to a single term, s_12^2'
+    )
+    parser.add_argument(
+        '--source-ratio', type=int, nargs=3, default=[2, 1, 0],
+        help='Set the source flavour ratio for the case when you want to fix it'
+    )
+    parser.add_argument(
+        '--scale', type=float, required=False,
+        help='Fix the scale to this value'
+    )
+    parser.add_argument(
+        '--dimension', type=int, default=3, help='Dimension'
+    )
+    parser.add_argument(
+        '--energy', type=float, default=1000, help='Energy'
+    )
+    parser.add_argument(
+        '--scale-bounds', type=float, nargs=2,
+        help='Upper and lower limits to plot the new physics scale'
     )
     args = parser.parse_args()
     return args

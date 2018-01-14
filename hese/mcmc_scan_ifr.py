@@ -141,6 +141,7 @@ def main():
     global BESTFIT
     global SIGMA
     global NUFIT
+    global HYPO
     BESTFIT = np.array(args.bestfit_ratio) / float(np.sum(args.bestfit_ratio))
     SIGMA = args.sigma_ratio
     if args.nufit.lower() == 'true':

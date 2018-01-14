@@ -21,17 +21,32 @@ import tqdm
 import chainer_plot
 
 
-DIMENSION = 6
-ENERGY = 100 # GeV
-BESTFIT = [1, 1, 1]
+RUN_SCAN = False
+
+FIX_MIXING = False
+FIX_SFR = True
+SOURCE_FR = [1, 2, 0]
+FIX_SCALE = True
+SCALE = 1e-30
+
+DIMENSION = 3
+ENERGY = 1000 # GeV
+MEASURED_FR = [1, 1, 1]
 SIGMA = 0.01
-NUFIT = False
-FLAT = True
+SCALE_RATIO = 100.
+MASS_EIGENVALUES = [7.40E-23, 2.515E-21]
+FLAT = False
+
+SCALE2_BOUNDS = {
+    3 : [np.power(10, np.round(np.log10(MASS_EIGENVALUES[1]/ENERGY))-4),
+         np.power(10, np.round(np.log10(MASS_EIGENVALUES[1]/ENERGY))+4)]
+}
 
 
 def test_uni(x):
     """Test the unitarity of a matrix."""
     print 'Unitarity test:\n{0}'.format(abs(np.dot(x, x.conj().T)))
+
 
 def angles_to_fr(angles):
     sphi4, c2psi = angles
@@ -58,7 +73,6 @@ def angles_to_u(angles):
     s13_2 = 1. - c13_2
     c23_2 = 1. - s23_2
 
-    # TODO(shivesh): negative sign?
     t12 = np.arcsin(np.sqrt(s12_2))
     t13 = np.arccos(np.sqrt(c13_2))
     t23 = np.arcsin(np.sqrt(s23_2))
@@ -77,15 +91,26 @@ def angles_to_u(angles):
     u = np.dot(np.dot(p1, p2), p3)
     return u
 
-NUFIT_U = angles_to_u((0.307, (1-0.2195)**2, 0.565, 3.97935))
+
+# s_12^2, c_13^4, s_23^2, dcp
+NUFIT_U = angles_to_u((0.307, (1-0.02195)**2, 0.565, 3.97935))
+
 
 def params_to_BSMu(theta):
-    s12_2, c13_4, s23_2, dcp, sc1, sc2 = theta
+    if FIX_MIXING:
+        s12_2, c13_4, s23_2, dcp, sc2 = theta[0], 1., 0., 0., theta[1]
+    elif FIX_SCALE:
+        s12_2, c13_4, s23_2, dcp = theta
+        sc2 = np.log10(SCALE)
+    else:
+        s12_2, c13_4, s23_2, dcp, sc2 = theta
+    sc2 = np.power(10., sc2)
+    sc1 = sc2 / SCALE_RATIO
 
     mass_matrix = np.array(
-        [[0, 0, 0], [0, 7.40E-23, 0], [0, 0, 2.515E-21]]
+        [[0, 0, 0], [0, MASS_EIGENVALUES[0], 0], [0, 0, MASS_EIGENVALUES[1]]]
     )
-    sm_ham = (1./2*ENERGY)*np.dot(NUFIT_U, np.dot(mass_matrix**2, NUFIT_U.conj()))
+    sm_ham = (1./(2*ENERGY))*np.dot(NUFIT_U, np.dot(mass_matrix, NUFIT_U.conj()))
 
     new_physics_u = angles_to_u((s12_2, c13_4, s23_2, dcp))
     scale_matrix = np.array(
@@ -97,6 +122,7 @@ def params_to_BSMu(theta):
 
     eg_values, eg_vector = LA.eig(bsm_ham)
     return eg_vector
+
 
 def u_to_fr(initial_fr, matrix):
     """Compute the observed flavour ratio assuming decoherence."""
@@ -110,11 +136,15 @@ def u_to_fr(initial_fr, matrix):
 
 def triangle_llh(theta):
     """-Log likelihood function for a given theta."""
-    fr1, fr2, fr3 = angles_to_fr(theta[-2:])
+    if FIX_SFR:
+        fr1, fr2, fr3 = SOURCE_FR
+        u = params_to_BSMu(theta)
+    else:
+        fr1, fr2, fr3 = angles_to_fr(theta[-2:])
+        u = params_to_BSMu(theta[:-2])
 
-    u = params_to_BSMu(theta[:-2])
     fr = u_to_fr((fr1, fr2, fr3), u)
-    fr_bf = BESTFIT
+    fr_bf = MEASURED_FR
     cov_fr = np.identity(3) * SIGMA
     if FLAT:
         return 10.
@@ -124,45 +154,45 @@ def triangle_llh(theta):
 
 def lnprior(theta):
     """Priors on theta."""
-    s12_2, c13_4, s23_2, dcp, sc1, sc2, sphi4, c2psi = theta
-    sc1, sc2 = np.power(10., sc1), np.power(10., sc2)
+    if FIX_SFR:
+        if FIX_MIXING:
+            s12_2, sc2 = theta
+        elif FIX_SCALE:
+            s12_2, c13_4, s23_2, dcp = theta
+        else:
+            s12_2, c13_4, s23_2, dcp, sc2 = theta
+    else:
+        if FIX_MIXING:
+            s12_2, sc2, sphi4, c2psi = theta
+        elif FIX_SCALE:
+            s12_2, c13_4, s23_2, dcp, sphi4, c2psi = theta
+        else:
+            s12_2, c13_4, s23_2, dcp, sc2, sphi4, c2psi = theta
+    if not FIX_SCALE:
+        sc2 = np.power(10., sc2)
 
-    # Flavour ratio bounds
-    if 0. <= sphi4 <= 1.0 and -1.0 <= c2psi <= 1.0:
-        pass
-    else: return -np.inf
+    if not FIX_SFR:
+        # Flavour ratio bounds
+        if 0. <= sphi4 <= 1.0 and -1.0 <= c2psi <= 1.0:
+            pass
+        else: return -np.inf
 
     # Mixing angle bounds
-    if 0. <= s12_2 <= 1. and 0. <= c13_4 <= 1. and 0. <= s23_2 <= 1. \
-       and 0. <= dcp <= 2*np.pi:
-        pass
-    else: return -np.inf
+    if FIX_MIXING:
+        if 0. <= s12_2 <= 1.:
+            pass
+        else: return -np.inf
+    else:
+        if 0. <= s12_2 <= 1. and 0. <= c13_4 <= 1. and 0. <= s23_2 <= 1. \
+           and 0. <= dcp <= 2*np.pi:
+            pass
+        else: return -np.inf
 
     # Scale bounds
-    if 1e-40 <= sc1 <= 1e-30 and 1e-40 <= sc2 <= 1e-30:
-        pass
-    else: return -np.inf
-
-    # if NUFIT:
-    #     u = angles_to_u(theta[:-2])
-    #     a_u = abs(u)
-    #     ue1 = a_u[0][0]
-    #     ue2 = a_u[0][1]
-    #     ue3 = a_u[0][2]
-    #     um1 = a_u[1][0]
-    #     um2 = a_u[1][1]
-    #     um3 = a_u[1][2]
-    #     ut1 = a_u[2][0]
-    #     ut2 = a_u[2][1]
-    #     ut3 = a_u[2][2]
-
-    #     # Mixing elements 3sigma bound from nufit
-    #     if 0.800 <= ue1 <= 0.844 and 0.515 <= ue2 <= 0.581 and 0.139 <= ue3 <= 0.155 \
-    #     and 0.229 <= um1 <= 0.516 and 0.438 <= um2 <= 0.699 and 0.614 <= um3 <= 0.790 \
-    #     and 0.249 <= ut1 <= 0.528 and 0.462 <= ut2 <= 0.715 and 0.595 <= ut3 <= 0.776:
-    #         pass
-    #     else:
-    #         return -np.inf
+    if not FIX_SCALE:
+        if SCALE2_BOUNDS[DIMENSION][0] <= sc2 <= SCALE2_BOUNDS[DIMENSION][1]:
+            pass
+        else: return -np.inf
 
     return 0.
 
@@ -179,12 +209,40 @@ def parse_args():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        '--bestfit-ratio', type=int, nargs=3, default=[1, 1, 1],
-        help='Set the bestfit flavour ratio'
+        '--measured-ratio', type=int, nargs=3, default=[1, 1, 1],
+        help='Set the central value for the measured flavour ratio at IceCube'
     )
     parser.add_argument(
         '--sigma-ratio', type=float, default=0.01,
-        help='Set the 1 sigma for the flavour ratio'
+        help='Set the 1 sigma for the measured flavour ratio'
+    )
+    parser.add_argument(
+        '--fix-source-ratio', type=str, default='False',
+        help='Fix the source flavour ratio'
+    )
+    parser.add_argument(
+        '--source-ratio', type=int, nargs=3, default=[2, 1, 0],
+        help='Set the source flavour ratio for the case when you want to fix it'
+    )
+    parser.add_argument(
+        '--fix-scale', type=str, default='False',
+        help='Fix the new physics scale'
+    )
+    parser.add_argument(
+        '--scale', type=float, default=1e-30,
+        help='Set the new physics scale'
+    )
+    parser.add_argument(
+        '--dimension', type=int, default=3,
+        help='Set the new physics dimension to consider'
+    )
+    parser.add_argument(
+        '--energy', type=float, default=1000,
+        help='Set the energy scale'
+    )
+    parser.add_argument(
+        '--flat-llh', type=str, default='False',
+        help='Run with a flat likelihood'
     )
     parser.add_argument(
         '--burnin', type=int, default=100,
@@ -197,10 +255,6 @@ def parse_args():
     parser.add_argument(
         '--nsteps', type=int, default=2000,
         help='Number of steps to run'
-    )
-    parser.add_argument(
-        '--nufit', type=str, default='False',
-        help='Include NuFit priors'
     )
     parser.add_argument(
         '--seed', type=int, default=99,
@@ -219,92 +273,214 @@ def main():
 
     np.random.seed(args.seed)
 
-    global BESTFIT
+    global DIMENSION
+    global ENERGY
+    global MEASURED_FR
     global SIGMA
-    global NUFIT
-    BESTFIT = np.array(args.bestfit_ratio) / float(np.sum(args.bestfit_ratio))
+    global FLAT
+    global FIX_SFR
+    global SOURCE_FR
+    global FIX_SCALE
+    global SCALE
+
+    if FIX_MIXING and FIX_SCALE:
+        raise NotImplementedError('Fixed mixing and scale not implemented')
+
+    DIMENSION = args.dimension
+    ENERGY = args.energy
+
+    MEASURED_FR = np.array(args.measured_ratio) / float(np.sum(args.measured_ratio))
     SIGMA = args.sigma_ratio
-    if args.nufit.lower() == 'true':
-        NUFIT = True
-        assert 0
-    elif args.nufit.lower() == 'false':
-        NUFIT = False
+
+    if args.flat_llh.lower() == 'true':
+        FLAT = True
+    elif args.flat_llh.lower() == 'false':
+        FLAT = False
     else:
         raise ValueError
-    print 'BESTFIT = {0}'.format(BESTFIT)
-    print 'SIGMA = {0}'.format(SIGMA)
-    print 'NUFIT = {0}'.format(NUFIT)
 
-    ndim = 8
+    if args.fix_source_ratio.lower() == 'true':
+        FIX_SFR = True
+    elif args.fix_source_ratio.lower() == 'false':
+        FIX_SFR = False
+    else:
+        raise ValueError
+
+    if args.fix_scale.lower() == 'true':
+        FIX_SCALE = True
+    elif args.fix_scale.lower() == 'false':
+        FIX_SCALE = False
+    else:
+        raise ValueError
+
+    if FIX_SFR:
+        SOURCE_FR = np.array(args.source_ratio) / float(np.sum(args.source_ratio))
+
+    if FIX_SCALE:
+	SCALE = args.scale
+
+    print 'MEASURED_FR = {0}'.format(MEASURED_FR)
+    print 'SIGMA = {0}'.format(SIGMA)
+    print 'FLAT = {0}'.format(FLAT)
+    print 'ENERGY = {0}'.format(ENERGY)
+    print 'DIMENSION = {0}'.format(DIMENSION)
+    print 'SCALE2_BOUNDS = {0}'.format(SCALE2_BOUNDS[DIMENSION])
+    print 'FIX_SFR = {0}'.format(FIX_SFR)
+    if FIX_SFR:
+        print 'SOURCE_FR = {0}'.format(SOURCE_FR)
+    print 'FIX_MIXING = {0}'.format(FIX_MIXING)
+    print 'FIX_SCALE = {0}'.format(FIX_SCALE)
+    if FIX_SCALE:
+        print 'SCALE = {0}'.format(SCALE)
+
+    if FIX_SFR:
+        if FIX_MIXING:
+            ndim = 2
+        elif FIX_SCALE:
+            ndim = 4
+        else:
+            ndim = 5
+    else:
+        if FIX_MIXING:
+            ndim = 4
+        elif FIX_SCALE:
+            ndim = 6
+        else:
+            ndim = 7
     nwalkers = args.nwalkers
     ntemps = 1
     burnin = args.burnin
     betas = np.array([1e0, 1e-1, 1e-2, 1e-3, 1e-4])
-    if not NUFIT:
-        p0_base = [0.5, 0.5, 0.5, np.pi, -35, -35, 0.5, 0.0]
-        p0_std = [0.2, 0.2, 0.2, 0.2, 5, 5, 0.2, 0.2]
+    s2 = np.average(np.log10(SCALE2_BOUNDS[DIMENSION]))
+    if FIX_SFR:
+        if FIX_MIXING:
+            p0_base = [0.5, s2]
+            p0_std = [0.2, 3]
+        elif FIX_SCALE:
+            p0_base = [0.5, 0.5, 0.5, np.pi]
+            p0_std = [0.2, 0.2, 0.2, 0.2]
+        else:
+            p0_base = [0.5, 0.5, 0.5, np.pi, s2]
+            p0_std = [0.2, 0.2, 0.2, 0.2, 3]
     else:
-        assert 0
-        p0_base = [0.306, 0.958, 0.441, 2*np.pi, 0.5, 0.5]
-        p0_std = [0.005, 0.001, 0.01, 0.5, 0.2, 0.2]
+        if FIX_MIXING:
+            p0_base = [0.5, s2, 0.5, 0.0]
+            p0_std = [0.2, 3, 0.2, 0.2]
+        elif FIX_SCALE:
+            p0_base = [0.5, 0.5, 0.5, np.pi, 0.5, 0.0]
+            p0_std = [0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
+        else:
+            p0_base = [0.5, 0.5, 0.5, np.pi, s2, 0.5, 0.0]
+            p0_std = [0.2, 0.2, 0.2, 0.2, 3, 0.2, 0.2]
 
     print 'p0_base', p0_base
     print 'p0_std', p0_std
     p0 = np.random.normal(p0_base, p0_std, size=[ntemps, nwalkers, ndim])
-    print 'p0', p0
     print map(lnprior, p0[0])
 
-    # threads = multiprocessing.cpu_count()
-    threads = 1
-    sampler = emcee.PTSampler(
-        ntemps, nwalkers, ndim, triangle_llh, lnprior, threads=threads
-    )
+    if RUN_SCAN:
+        # threads = multiprocessing.cpu_count()
+        threads = 1
+        sampler = emcee.PTSampler(
+            ntemps, nwalkers, ndim, triangle_llh, lnprior, threads=threads
+        )
 
-    print "Running burn-in"
-    for result in tqdm.tqdm(sampler.sample(p0, iterations=burnin), total=burnin):
-        pos, prob, state = result
-    sampler.reset()
-    print "Finished burn-in"
+    if RUN_SCAN:
+        print "Running burn-in"
+        for result in tqdm.tqdm(sampler.sample(p0, iterations=burnin), total=burnin):
+            pos, prob, state = result
+        sampler.reset()
+        print "Finished burn-in"
 
-    nsteps = args.nsteps
+        nsteps = args.nsteps
 
-    print "Running"
-    for _ in tqdm.tqdm(sampler.sample(pos, iterations=nsteps), total=nsteps):
-        pass
-    print "Finished"
+        print "Running"
+        for _ in tqdm.tqdm(sampler.sample(pos, iterations=nsteps), total=nsteps):
+            pass
+        print "Finished"
 
-    samples = sampler.chain[0, :, :, :].reshape((-1, ndim))
-    print sampler.acceptance_fraction
-    print np.sum(sampler.acceptance_fraction)
-    print np.unique(samples[:,0]).shape
+    if FIX_SFR:
+        if FIX_MIXING:
+            outfile = args.outfile+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}_sfr_{4:03d}_{5:03d}_{6:03d}_DIM{7}_fix_mixing'.format(
+                int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100), int(SIGMA*1000),
+                int(SOURCE_FR[0]*100), int(SOURCE_FR[1]*100), int(SOURCE_FR[2]*100), DIMENSION
+            )
+        elif FIX_SCALE:
+            outfile = args.outfile+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}_sfr_{4:03d}_{5:03d}_{6:03d}_DIM{7}_fixed_scale_{8}'.format(
+                int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100), int(SIGMA*1000),
+                int(SOURCE_FR[0]*100), int(SOURCE_FR[1]*100), int(SOURCE_FR[2]*100), DIMENSION, SCALE
+            )
+        else:
+            outfile = args.outfile+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}_sfr_{4:03d}_{5:03d}_{6:03d}_DIM{7}_single_scale'.format(
+                int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100), int(SIGMA*1000),
+                int(SOURCE_FR[0]*100), int(SOURCE_FR[1]*100), int(SOURCE_FR[2]*100), DIMENSION
+            )
+    else:
+        if FIX_MIXING:
+            outfile = args.outfile+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}_DIM{4}_fix_mixing'.format(
+                int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100),
+                int(SIGMA*1000), DIMENSION
+            )
+        elif FIX_SCALE:
+            outfile = args.outfile+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}_DIM{4}_fixed_scale_{5}'.format(
+                int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100),
+                int(SIGMA*1000), DIMENSION, SCALE
+            )
+        else:
+            outfile = args.outfile+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}_DIM{4}'.format(
+                int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100),
+                int(SIGMA*1000), DIMENSION
+            )
 
-    outfile = args.outfile+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}'.format(
-        int(BESTFIT[0]*100), int(BESTFIT[1]*100), int(BESTFIT[2]*100), int(SIGMA*1000)
-    )
-    if NUFIT:
-        outfile += '_nufit'
+    if RUN_SCAN:
+        samples = sampler.chain[0, :, :, :].reshape((-1, ndim))
+        print 'acceptance fraction', sampler.acceptance_fraction
+        print 'sum of acceptance fraction', np.sum(sampler.acceptance_fraction)
+        print 'np.unique(samples[:,0]).shape', np.unique(samples[:,0]).shape
+
+        try:
+            print 'autocorrelation', sampler.acor
+        except:
+            print 'WARNING : NEED TO RUN MORE SAMPLES FOR FILE ' + outfile
+
     if FLAT:
 	outfile += '_flat'
 
-    np.save(outfile+'.npy', samples)
+    if RUN_SCAN:
+        np.save(outfile+'.npy', samples)
 
     print "Making triangle plots"
     chainer_plot.plot(
         infile=outfile+'.npy',
         angles=True,
-        nufit=NUFIT,
-        outfile=outfile+'_angles.pdf',
-        bestfit_ratio=BESTFIT,
-        sigma_ratio=SIGMA
+        outfile=outfile[:5]+outfile[5:].replace('data', 'plots')+'_angles.pdf',
+        measured_ratio=MEASURED_FR,
+        sigma_ratio=SIGMA,
+        fix_sfr=FIX_SFR,
+        fix_mixing=FIX_MIXING,
+        fix_scale=FIX_SCALE,
+        source_ratio=SOURCE_FR,
+        scale=SCALE,
+	dimension=DIMENSION,
+	energy=ENERGY,
+	scale_bounds=SCALE2_BOUNDS[DIMENSION],
     )
-    chainer_plot.plot(
-        infile=outfile+'.npy',
-        angles=False,
-        nufit=NUFIT,
-        outfile=outfile+'.pdf',
-        bestfit_ratio=BESTFIT,
-        sigma_ratio=SIGMA
-    )
+    # if not FIX_MIXING:
+    #     chainer_plot.plot(
+    #         infile=outfile+'.npy',
+    #         angles=False,
+    #         outfile=outfile[:5]+outfile[5:].replace('data', 'plots')+'_angles.pdf',
+    #         measured_ratio=MEASURED_FR,
+    #         sigma_ratio=SIGMA,
+    #         fix_sfr=FIX_SFR,
+    #         fix_mixing=FIX_MIXING,
+    #         fix_scale=FIX_SCALE,
+    #         source_ratio=SOURCE_FR,
+    #         scale=SCALE,
+    #         dimension=DIMENSION,
+    #         energy=ENERGY,
+    #         scale_bounds=SCALE2_BOUNDS[DIMENSION],
+    #     )
     print "DONE!"
 
 
@@ -313,3 +489,4 @@ main.__doc__ = __doc__
 
 if __name__ == '__main__':
     main()
+
