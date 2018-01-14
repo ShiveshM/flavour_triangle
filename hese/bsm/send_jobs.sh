@@ -32,7 +32,7 @@ flat=False
 burnin=200
 nwalkers=200
 nsteps=2000
-scales="1E-20 1E-25 1E-30"
+scales="1E-20 1E-23 1E-25 1E-27 1E-30"
 
 count=${#m_a[@]}
 for ((i=0; i<$count; i++)); do
@@ -40,18 +40,24 @@ for ((i=0; i<$count; i++)); do
     echo "${arg[0]} ${arg[1]} ${arg[2]}"
 
     outfile=/data/mandalia/flavour_ratio/data/DIM${dimension}/full_scan/0_001/mcmc_chain
-    qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} False 0 0 0 False 0 ${dimension} ${energy} ${flat} ${burnin} ${nwalkers} ${nsteps} ${outfile}
+    qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} False 0 0 0 False 0 ${dimension} ${energy} ${flat} ${burnin} ${nwalkers} ${nsteps} ${outfile} False
+
+    outfile=/data/mandalia/flavour_ratio/data/DIM${dimension}/fix_mixing/0_001/mcmc_chain
+    qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} False 0 0 0 False 0 ${dimension} ${energy} ${flat} ${burnin} ${nwalkers} ${nsteps} ${outfile} True
 
     for ((j=0; j<$count; j++)); do
         brg=${!m_a[j]}
 
         outfile=/data/mandalia/flavour_ratio/data/DIM${dimension}/fix_ifr/0_001/mcmc_chain
-        qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} True ${brg[0]} ${brg[1]} ${brg[2]} False 0 ${dimension} ${energy} ${flat} ${burnin} ${nwalkers} ${nsteps} ${outfile}
+        qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} True ${brg[0]} ${brg[1]} ${brg[2]} False 0 ${dimension} ${energy} ${flat} ${burnin} ${nwalkers} ${nsteps} ${outfile} False
+
+        outfile=/data/mandalia/flavour_ratio/data/DIM${dimension}/fix_ifr_mixing/0_001/mcmc_chain
+        qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} True ${brg[0]} ${brg[1]} ${brg[2]} False 0 ${dimension} ${energy} ${flat} ${burnin} ${nwalkers} ${nsteps} ${outfile} True
 
 	for scale in ${scales}; do
             echo "${scale}"
             outfile=/data/mandalia/flavour_ratio/data/DIM${dimension}/fix_ifr_scale/0_001/mcmc_chain
-	    qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} True ${brg[0]} ${brg[1]} ${brg[2]} True ${scale} ${dimension} ${energy} ${flat} ${burnin} ${nwalkers} ${nsteps} ${outfile}
+	    qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} True ${brg[0]} ${brg[1]} ${brg[2]} True ${scale} ${dimension} ${energy} ${flat} ${burnin} ${nwalkers} ${nsteps} ${outfile} False
 	done
 
         # OLD

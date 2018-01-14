@@ -21,26 +21,23 @@ import tqdm
 import chainer_plot
 
 
-RUN_SCAN = False
+RUN_SCAN = True
 
 FIX_MIXING = False
 FIX_SFR = True
 SOURCE_FR = [1, 2, 0]
 FIX_SCALE = True
-SCALE = 1e-30
 
 DIMENSION = 3
-ENERGY = 1000 # GeV
+ENERGY = 1000000 # GeV
 MEASURED_FR = [1, 1, 1]
-SIGMA = 0.01
+SIGMA = 0.001
 SCALE_RATIO = 100.
 MASS_EIGENVALUES = [7.40E-23, 2.515E-21]
 FLAT = False
 
-SCALE2_BOUNDS = {
-    3 : [np.power(10, np.round(np.log10(MASS_EIGENVALUES[1]/ENERGY))-4),
-         np.power(10, np.round(np.log10(MASS_EIGENVALUES[1]/ENERGY))+4)]
-}
+SCALE = np.power(10, np.round(np.log10(MASS_EIGENVALUES[1]/ENERGY)) - np.log10(ENERGY**(DIMENSION-3)))
+SCALE2_BOUNDS = (SCALE*1E-4, SCALE*1E4)
 
 
 def test_uni(x):
@@ -190,7 +187,7 @@ def lnprior(theta):
 
     # Scale bounds
     if not FIX_SCALE:
-        if SCALE2_BOUNDS[DIMENSION][0] <= sc2 <= SCALE2_BOUNDS[DIMENSION][1]:
+        if SCALE2_BOUNDS[0] <= sc2 <= SCALE2_BOUNDS[1]:
             pass
         else: return -np.inf
 
@@ -223,6 +220,10 @@ def parse_args():
     parser.add_argument(
         '--source-ratio', type=int, nargs=3, default=[2, 1, 0],
         help='Set the source flavour ratio for the case when you want to fix it'
+    )
+    parser.add_argument(
+        '--fix-mixing', type=str, default='False',
+        help='Fix all mixing parameters except one'
     )
     parser.add_argument(
         '--fix-scale', type=str, default='False',
@@ -280,11 +281,9 @@ def main():
     global FLAT
     global FIX_SFR
     global SOURCE_FR
+    global FIX_MIXING
     global FIX_SCALE
     global SCALE
-
-    if FIX_MIXING and FIX_SCALE:
-        raise NotImplementedError('Fixed mixing and scale not implemented')
 
     DIMENSION = args.dimension
     ENERGY = args.energy
@@ -306,6 +305,13 @@ def main():
     else:
         raise ValueError
 
+    if args.fix_mixing.lower() == 'true':
+        FIX_MIXING = True
+    elif args.fix_mixing.lower() == 'false':
+        FIX_MIXING = False
+    else:
+        raise ValueError
+
     if args.fix_scale.lower() == 'true':
         FIX_SCALE = True
     elif args.fix_scale.lower() == 'false':
@@ -318,13 +324,20 @@ def main():
 
     if FIX_SCALE:
 	SCALE = args.scale
+    else:
+        SCALE = np.power(10, np.round(np.log10(MASS_EIGENVALUES[1]/ENERGY)) - np.log10(ENERGY**(DIMENSION-3)))
+
+    if FIX_MIXING and FIX_SCALE:
+        raise NotImplementedError('Fixed mixing and scale not implemented')
+
+    SCALE2_BOUNDS = (SCALE*1E-4, SCALE*1E4)
 
     print 'MEASURED_FR = {0}'.format(MEASURED_FR)
     print 'SIGMA = {0}'.format(SIGMA)
     print 'FLAT = {0}'.format(FLAT)
     print 'ENERGY = {0}'.format(ENERGY)
     print 'DIMENSION = {0}'.format(DIMENSION)
-    print 'SCALE2_BOUNDS = {0}'.format(SCALE2_BOUNDS[DIMENSION])
+    print 'SCALE2_BOUNDS = {0}'.format(SCALE2_BOUNDS)
     print 'FIX_SFR = {0}'.format(FIX_SFR)
     if FIX_SFR:
         print 'SOURCE_FR = {0}'.format(SOURCE_FR)
@@ -351,7 +364,7 @@ def main():
     ntemps = 1
     burnin = args.burnin
     betas = np.array([1e0, 1e-1, 1e-2, 1e-3, 1e-4])
-    s2 = np.average(np.log10(SCALE2_BOUNDS[DIMENSION]))
+    s2 = np.average(np.log10(SCALE2_BOUNDS))
     if FIX_SFR:
         if FIX_MIXING:
             p0_base = [0.5, s2]
@@ -463,7 +476,7 @@ def main():
         scale=SCALE,
 	dimension=DIMENSION,
 	energy=ENERGY,
-	scale_bounds=SCALE2_BOUNDS[DIMENSION],
+	scale_bounds=SCALE2_BOUNDS,
     )
     # if not FIX_MIXING:
     #     chainer_plot.plot(
@@ -479,7 +492,7 @@ def main():
     #         scale=SCALE,
     #         dimension=DIMENSION,
     #         energy=ENERGY,
-    #         scale_bounds=SCALE2_BOUNDS[DIMENSION],
+    #         scale_bounds=SCALE2_BOUNDS,
     #     )
     print "DONE!"
 

@@ -80,7 +80,7 @@ def plot(infile, angles, outfile, measured_ratio, sigma_ratio, fix_sfr,
                         r'{\rm log}_{10}\Lambda', r'sin^4(\phi)', r'cos(2\psi)']
     print labels
 
-    if not fix_mixing:
+    if not fix_scale:
         s2 = np.log10(scale_bounds)
 
     if not angles:
@@ -141,24 +141,24 @@ def plot(infile, angles, outfile, measured_ratio, sigma_ratio, fix_sfr,
             label = 'Source flavour ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nIC observed flavour ratio = [{3:.2f}, {4:.2f}, {5:.2f}]\nSigma = {6:.3f}\nDimension = {7}\nEnergy = {8} GeV\nScale = {9}'.format(
                 source_ratio[0], source_ratio[1], source_ratio[2],
                 measured_ratio[0], measured_ratio[1], measured_ratio[2], sigma_ratio,
-                dimension, energy, scale
+                dimension, int(energy), scale
             )
         else:
             label = 'Source flavour ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nIC observed flavour ratio = [{3:.2f}, {4:.2f}, {5:.2f}]\nSigma = {6:.3f}\nDimension = {7}\nEnergy = {8} GeV'.format(
                 source_ratio[0], source_ratio[1], source_ratio[2],
                 measured_ratio[0], measured_ratio[1], measured_ratio[2], sigma_ratio,
-                dimension, energy
+                dimension, int(energy)
             )
     else:
         if fix_scale:
 	    label = 'IC observed flavour ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nSigma = {3:.3f}\nDimension = {4}\nEnergy = {5} GeV\nScale = {6}'.format(
 		measured_ratio[0], measured_ratio[1], measured_ratio[2], sigma_ratio,
-		dimension, energy, scale
+		dimension, int(energy), scale
 	    )
 	else:
 	    label = 'IC observed flavour ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nSigma = {3:.3f}\nDimension = {4}\nEnergy = {5} GeV'.format(
 		measured_ratio[0], measured_ratio[1], measured_ratio[2], sigma_ratio,
-		dimension, energy
+		dimension, int(energy)
 	    )
 
     Tsample = mcsamples.MCSamples(
@@ -177,7 +177,7 @@ def plot(infile, angles, outfile, measured_ratio, sigma_ratio, fix_sfr,
     g.triangle_plot(
         [Tsample], filled=True,
     )
-    if fix_mixing:
+    if fix_mixing and fix_sfr:
         mpl.pyplot.figtext(0.4, 0.7, label, fontsize=4)
     else:
         mpl.pyplot.figtext(0.5, 0.7, label, fontsize=15)
