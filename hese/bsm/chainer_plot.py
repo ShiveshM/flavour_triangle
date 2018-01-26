@@ -33,8 +33,8 @@ def plot(infile, angles, outfile, measured_ratio, sigma_ratio, fix_sfr,
     """Make the triangle plot"""
     if not angles:
         if fix_mixing:
-            assert 0
-        if fix_sfr:
+            labels = [r'{\rm log}_{10}\Lambda', r'\phi_e', r'\phi_\mu', r'\phi_\tau']
+        elif fix_sfr:
             if fix_scale:
                 labels = [r'\mid \tilde{U}_{e1} \mid', r'\mid \tilde{U}_{e2} \mid', r'\mid \tilde{U}_{e3} \mid', \
                           r'\mid \tilde{U}_{\mu1} \mid', r'\mid \tilde{U}_{\mu2} \mid', r'\mid \tilde{U}_{\mu3} \mid', \
@@ -58,6 +58,7 @@ def plot(infile, angles, outfile, measured_ratio, sigma_ratio, fix_sfr,
     else:
         if fix_sfr:
             if fix_mixing:
+                assert 0
                 labels=[r'\tilde{s}_{12}^2', r'{\rm log}_{10}\Lambda']
             elif fix_scale:
                 labels=[r'\tilde{s}_{12}^2', r'\tilde{c}_{13}^4',
@@ -68,8 +69,7 @@ def plot(infile, angles, outfile, measured_ratio, sigma_ratio, fix_sfr,
                         r'{\rm log}_{10}\Lambda']
         else:
             if fix_mixing:
-                labels=[r'\tilde{s}_{12}^2', r'{\rm log}_{10}\Lambda',
-                        r'sin^4(\phi)', r'cos(2\psi)']
+                labels=[r'{\rm log}_{10}\Lambda', r'sin^4(\phi)', r'cos(2\psi)']
             elif fix_scale:
                 labels=[r'\tilde{s}_{12}^2', r'\tilde{c}_{13}^4',
                         r'\tilde{s}_{23}^2', r'\tilde{\delta_{CP}}',
@@ -84,7 +84,9 @@ def plot(infile, angles, outfile, measured_ratio, sigma_ratio, fix_sfr,
         s2 = np.log10(scale_bounds)
 
     if not angles:
-        if fix_sfr:
+        if fix_mixing:
+            ranges = [s2, (0, 1), (0, 1), (0, 1)]
+        elif fix_sfr:
             if fix_scale:
                 ranges = [(0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (0, 1)]
             else:
@@ -104,7 +106,7 @@ def plot(infile, angles, outfile, measured_ratio, sigma_ratio, fix_sfr,
                 ranges = [(0, 1), (0, 1), (0, 1), (0, 2*np.pi), s2]
         else:
             if fix_mixing:
-                ranges = [(0, 1), s2, (0, 1), (-1, 1)]
+                ranges = [s2, (0, 1), (-1, 1)]
             elif fix_scale:
                 ranges = [(0, 1), (0, 1), (0, 1), (0, 2*np.pi), (0, 1), (-1, 1)]
             else:
@@ -116,7 +118,11 @@ def plot(infile, angles, outfile, measured_ratio, sigma_ratio, fix_sfr,
     raw = np.load(infile)
     print 'raw.shape', raw.shape
     if not angles:
-        if fix_sfr:
+        if fix_mixing:
+            fr_elements = np.array(map(mcmc_scan.angles_to_fr, raw[:,-2:]))
+            sc_elements = raw[:,:-2]
+            Tchain = np.column_stack([sc_elements, fr_elements])
+        elif fix_sfr:
             if fix_scale:
                 Tchain = np.array(map(flat_angles_to_u, raw))
             else:

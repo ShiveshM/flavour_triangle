@@ -13,7 +13,7 @@ import multiprocessing
 
 import numpy as np
 from scipy.stats import multivariate_normal
-from numpy import linalg as LA
+from scipy import linalg
 
 import emcee
 import tqdm
@@ -34,15 +34,21 @@ MEASURED_FR = [1, 1, 1]
 SIGMA = 0.001
 SCALE_RATIO = 100.
 MASS_EIGENVALUES = [7.40E-23, 2.515E-21]
+# MASS_EIGENVALUES = [7.40E-100, 2.515E-100]
 FLAT = False
 
-SCALE = np.power(10, np.round(np.log10(MASS_EIGENVALUES[1]/ENERGY)) - np.log10(ENERGY**(DIMENSION-3)))
-SCALE2_BOUNDS = (SCALE*1E-4, SCALE*1E4)
+CHANGE_MASS = False
+if CHANGE_MASS:
+    SCALE = 1E-27
+else:
+    SCALE = np.power(10, np.round(np.log10(MASS_EIGENVALUES[1]/ENERGY)) - np.log10(ENERGY**(DIMENSION-3)))
+SCALE2_BOUNDS = (SCALE*1E-10, SCALE*1E10)
 
 
 def test_uni(x):
     """Test the unitarity of a matrix."""
-    print 'Unitarity test:\n{0}'.format(abs(np.dot(x, x.conj().T)))
+    # print 'Unitarity test:\n{0}'.format(abs(np.dot(x, x.conj().T)))
+    return abs(np.dot(x, x.conj().T))
 
 
 def angles_to_fr(angles):
@@ -89,13 +95,53 @@ def angles_to_u(angles):
     return u
 
 
+def cardano_eqn(ham):
+    """Diagonalise the effective Hamiltonian 3x3 matrix into the form
+    h_{eff} = UE_{eff}U^{dagger} using the procedure in PRD91, 052003 (2015)
+    """
+    a = -np.trace(ham)
+    b = (0.5) * ((np.trace(ham))**2 - np.trace(np.dot(ham, ham)))
+    c = -linalg.det(ham)
+
+    Q = (1/9.) * (a**2 - 3*b)
+    R = (1/54.) * (2*a**3 - 9*a*b + 27*c)
+    theta = np.arccos(R / np.sqrt(Q**3))
+
+    E1 = -2 * np.sqrt(Q) * np.cos(theta/3.) - (1/3.)*a
+    E2 = -2 * np.sqrt(Q) * np.cos((theta - 2.*np.pi)/3.) - (1/3.)*a
+    E3 = -2 * np.sqrt(Q) * np.cos((theta + 2.*np.pi)/3.) - (1/3.)*a
+
+    A1 = ham[1][2] * (ham[0][0] - E1) - ham[1][0]*ham[0][2]
+    A2 = ham[1][2] * (ham[0][0] - E2) - ham[1][0]*ham[0][2]
+    A3 = ham[1][2] * (ham[0][0] - E3) - ham[1][0]*ham[0][2]
+
+    B1 = ham[2][0] * (ham[1][1] - E1) - ham[2][1]*ham[1][0]
+    B2 = ham[2][0] * (ham[1][1] - E2) - ham[2][1]*ham[1][0]
+    B3 = ham[2][0] * (ham[1][1] - E3) - ham[2][1]*ham[1][0]
+
+    C1 = ham[1][0] * (ham[2][2] - E1) - ham[1][2]*ham[2][0]
+    C2 = ham[1][0] * (ham[2][2] - E2) - ham[1][2]*ham[2][0]
+    C3 = ham[1][0] * (ham[2][2] - E3) - ham[1][2]*ham[2][0]
+
+    N1 = np.sqrt(abs(A1*B1)**2 + abs(A1*C1)**2 + abs(B1*C1)**2)
+    N2 = np.sqrt(abs(A2*B2)**2 + abs(A2*C2)**2 + abs(B2*C2)**2)
+    N3 = np.sqrt(abs(A3*B3)**2 + abs(A3*C3)**2 + abs(B3*C3)**2)
+
+    mm = np.array([
+        [np.conjugate(B1)*C1 / N1, np.conjugate(B2)*C2 / N2, np.conjugate(B3)*C3 / N3],
+        [A1*C1 / N1, A2*C2 / N2, A3*C3 / N3],
+        [A1*B1 / N1, A2*B2 / N2, A3*B3 / N3]
+    ])
+    return mm
+
+
 # s_12^2, c_13^4, s_23^2, dcp
 NUFIT_U = angles_to_u((0.307, (1-0.02195)**2, 0.565, 3.97935))
 
 
 def params_to_BSMu(theta):
     if FIX_MIXING:
-        s12_2, c13_4, s23_2, dcp, sc2 = theta[0], 1., 0., 0., theta[1]
+        s12_2, c13_4, s23_2, dcp, sc2 = 0.5, 1.0-1E-6, 0.5, 0., theta
     elif FIX_SCALE:
         s12_2, c13_4, s23_2, dcp = theta
         sc2 = np.log10(SCALE)
@@ -107,17 +153,20 @@ def params_to_BSMu(theta):
     mass_matrix = np.array(
         [[0, 0, 0], [0, MASS_EIGENVALUES[0], 0], [0, 0, MASS_EIGENVALUES[1]]]
     )
-    sm_ham = (1./(2*ENERGY))*np.dot(NUFIT_U, np.dot(mass_matrix, NUFIT_U.conj()))
+    sm_ham = (1./(2*ENERGY))*np.dot(NUFIT_U, np.dot(mass_matrix, NUFIT_U.conj().T))
 
     new_physics_u = angles_to_u((s12_2, c13_4, s23_2, dcp))
     scale_matrix = np.array(
         [[0, 0, 0], [0, sc1, 0], [0, 0, sc2]]
     )
-    bsm_term = (ENERGY**(DIMENSION-3)) * np.dot(new_physics_u, np.dot(scale_matrix, new_physics_u.conj()))
+    bsm_term = (ENERGY**(DIMENSION-3)) * np.dot(new_physics_u, np.dot(scale_matrix, new_physics_u.conj().T))
 
     bsm_ham = sm_ham + bsm_term
 
-    eg_values, eg_vector = LA.eig(bsm_ham)
+    eg_vector = cardano_eqn(bsm_ham)
+    tu = test_uni(eg_vector)
+    if not abs(np.trace(tu) - 3.) < 1e-5 or not abs(np.sum(tu) - 3.) < 1e-5:
+	raise AssertionError('Matrix is not unitary!\neg_vector\n{0}\ntest u\n{1}'.format(eg_vector, tu))
     return eg_vector
 
 
@@ -160,7 +209,7 @@ def lnprior(theta):
             s12_2, c13_4, s23_2, dcp, sc2 = theta
     else:
         if FIX_MIXING:
-            s12_2, sc2, sphi4, c2psi = theta
+            sc2, sphi4, c2psi = theta
         elif FIX_SCALE:
             s12_2, c13_4, s23_2, dcp, sphi4, c2psi = theta
         else:
@@ -175,11 +224,7 @@ def lnprior(theta):
         else: return -np.inf
 
     # Mixing angle bounds
-    if FIX_MIXING:
-        if 0. <= s12_2 <= 1.:
-            pass
-        else: return -np.inf
-    else:
+    if not FIX_MIXING:
         if 0. <= s12_2 <= 1. and 0. <= c13_4 <= 1. and 0. <= s23_2 <= 1. \
            and 0. <= dcp <= 2*np.pi:
             pass
@@ -325,12 +370,17 @@ def main():
     if FIX_SCALE:
 	SCALE = args.scale
     else:
-        SCALE = np.power(10, np.round(np.log10(MASS_EIGENVALUES[1]/ENERGY)) - np.log10(ENERGY**(DIMENSION-3)))
+        if CHANGE_MASS:
+            SCALE = 1E-27
+        else:
+            SCALE = np.power(10, np.round(np.log10(MASS_EIGENVALUES[1]/ENERGY)) - np.log10(ENERGY**(DIMENSION-3)))
 
+    if FIX_MIXING and FIX_SFR:
+        raise NotImplementedError('Fixed mixing and sfr not implemented')
     if FIX_MIXING and FIX_SCALE:
         raise NotImplementedError('Fixed mixing and scale not implemented')
 
-    SCALE2_BOUNDS = (SCALE*1E-4, SCALE*1E4)
+    SCALE2_BOUNDS = (SCALE*1E-10, SCALE*1E10)
 
     print 'MEASURED_FR = {0}'.format(MEASURED_FR)
     print 'SIGMA = {0}'.format(SIGMA)
@@ -355,7 +405,7 @@ def main():
             ndim = 5
     else:
         if FIX_MIXING:
-            ndim = 4
+            ndim = 3
         elif FIX_SCALE:
             ndim = 6
         else:
@@ -377,8 +427,8 @@ def main():
             p0_std = [0.2, 0.2, 0.2, 0.2, 3]
     else:
         if FIX_MIXING:
-            p0_base = [0.5, s2, 0.5, 0.0]
-            p0_std = [0.2, 3, 0.2, 0.2]
+            p0_base = [s2, 0.5, 0.0]
+            p0_std = [3, 0.2, 0.2]
         elif FIX_SCALE:
             p0_base = [0.5, 0.5, 0.5, np.pi, 0.5, 0.0]
             p0_std = [0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
@@ -478,22 +528,21 @@ def main():
 	energy=ENERGY,
 	scale_bounds=SCALE2_BOUNDS,
     )
-    # if not FIX_MIXING:
-    #     chainer_plot.plot(
-    #         infile=outfile+'.npy',
-    #         angles=False,
-    #         outfile=outfile[:5]+outfile[5:].replace('data', 'plots')+'_angles.pdf',
-    #         measured_ratio=MEASURED_FR,
-    #         sigma_ratio=SIGMA,
-    #         fix_sfr=FIX_SFR,
-    #         fix_mixing=FIX_MIXING,
-    #         fix_scale=FIX_SCALE,
-    #         source_ratio=SOURCE_FR,
-    #         scale=SCALE,
-    #         dimension=DIMENSION,
-    #         energy=ENERGY,
-    #         scale_bounds=SCALE2_BOUNDS,
-    #     )
+    chainer_plot.plot(
+        infile=outfile+'.npy',
+        angles=False,
+        outfile=outfile[:5]+outfile[5:].replace('data', 'plots')+'.pdf',
+        measured_ratio=MEASURED_FR,
+        sigma_ratio=SIGMA,
+        fix_sfr=FIX_SFR,
+        fix_mixing=FIX_MIXING,
+        fix_scale=FIX_SCALE,
+        source_ratio=SOURCE_FR,
+        scale=SCALE,
+        dimension=DIMENSION,
+        energy=ENERGY,
+        scale_bounds=SCALE2_BOUNDS,
+    )
     print "DONE!"
 
 

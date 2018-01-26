@@ -5,8 +5,8 @@ import numpy as np
 from scipy.stats import multivariate_normal
 
 
-BESTFIT=[0, 1, 0]
-SIGMA=0.01
+BESTFIT=[1, 1, 1]
+SIGMA=0.001
 
 def cartesian(arrays, out=None):
     arrays = [np.asarray(x) for x in arrays]
@@ -51,7 +51,7 @@ print np.sum(mask)
 
 p_mask = p[mask]
 
-with open('llh_0_1_0_0_01.txt', 'w') as f:
+with open('llh_1_1_1_0_001.txt', 'w') as f:
     for frs in p_mask:
         for fr in frs:
             f.write('{0:.6f} '.format(fr))
