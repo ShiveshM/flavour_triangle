@@ -192,7 +192,7 @@ def plot(infile, angles, outfile, measured_ratio, sigma_ratio, fix_sfr,
     try:
         os.makedirs(outfile[:-len(os.path.basename(outfile))])
     except OSError as exc:  # Python >2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
+        if exc.errno == errno.EEXIST and os.path.isdir(outfile[:-len(os.path.basename(outfile))]):
             pass
         else:
             raise
