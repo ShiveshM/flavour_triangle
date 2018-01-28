@@ -5,8 +5,9 @@ From a gaussian likelihood run an MCMC scan to find the posteriors
 
 from __future__ import absolute_import, division
 
-import sys
-sys.path.append('/users/mandalia/Documents/flavour_triangle/hese/bsm/')
+import os, sys
+sys.path.append('/home/smandalia/Documents/flavour_triangle/hese/bsm/')
+import errno
 
 import argparse
 import multiprocessing
@@ -21,7 +22,7 @@ import tqdm
 import chainer_plot
 
 
-RUN_SCAN = True
+RUN_SCAN = False
 
 FIX_MIXING = False
 FIX_SFR = True
@@ -510,6 +511,13 @@ def main():
 	outfile += '_flat'
 
     if RUN_SCAN:
+        try:
+            os.makedirs(outfile[:-len(os.path.basename(outfile))])
+        except OSError as exc:  # Python >2.5
+            if exc.errno == errno.EEXIST and os.path.isdir(outfile[:-len(os.path.basename(outfile))]):
+                pass
+            else:
+                raise
         np.save(outfile+'.npy', samples)
 
     print "Making triangle plots"
