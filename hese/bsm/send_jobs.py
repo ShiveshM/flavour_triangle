@@ -43,7 +43,7 @@ script = '/users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh'
 job_number = 1
 for dim in dimensions:
     print 'dimension', dim
-    outchain_head = '/data/mandalia/flavour_ratio/data/DIM{0}'.format(dim)
+    outchain_head = '/data/icecube/mandalia/flavour_ratio/data/DIM{0}'.format(dim)
 
     for sig in sigmas:
         print 'sigma', sig
@@ -51,7 +51,7 @@ for dim in dimensions:
             print frs
             outchains = outchain_head + '/fix_ifr/{0}/mcmc_chain'.format(str(sig).replace('.', '_'))
             command = ''
-            # command += 'qsub -cwd -V '
+            command += 'qsub -cwd -V '
             command += script
             command += ' {0}'.format(frs[0])
             command += ' {0}'.format(frs[1])
@@ -77,7 +77,7 @@ for dim in dimensions:
             print frs
             outchains = outchain_head + '/full_scan/{0}/mcmc_chain'.format(str(sig).replace('.', '_'))
             command = ''
-            # command += 'qsub -cwd -V '
+            command += 'qsub -cwd -V '
             command += script
             command += ' {0}'.format(frs[0])
             command += ' {0}'.format(frs[1])
