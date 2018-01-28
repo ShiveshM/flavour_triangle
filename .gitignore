@@ -6,3 +6,9 @@ nohup.out
 wrap.sh.*
 wrap_ifr.sh.*
 *.nfs*
+logs/
+*.err
+*.out
+*.log
+*.lock
+*.condor.sub

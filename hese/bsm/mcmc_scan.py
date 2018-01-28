@@ -5,8 +5,9 @@ From a gaussian likelihood run an MCMC scan to find the posteriors
 
 from __future__ import absolute_import, division
 
-import sys
-sys.path.append('/users/mandalia/Documents/flavour_triangle/hese/bsm/')
+import os, sys
+sys.path.append('/home/smandalia/Documents/flavour_triangle/hese/bsm/')
+import errno
 
 import argparse
 import multiprocessing
@@ -510,39 +511,46 @@ def main():
 	outfile += '_flat'
 
     if RUN_SCAN:
+        try:
+            os.makedirs(outfile[:-len(os.path.basename(outfile))])
+        except OSError as exc:  # Python >2.5
+            if exc.errno == errno.EEXIST and os.path.isdir(outfile[:-len(os.path.basename(outfile))]):
+                pass
+            else:
+                raise
         np.save(outfile+'.npy', samples)
 
-    print "Making triangle plots"
-    chainer_plot.plot(
-        infile=outfile+'.npy',
-        angles=True,
-        outfile=outfile[:5]+outfile[5:].replace('data', 'plots')+'_angles.pdf',
-        measured_ratio=MEASURED_FR,
-        sigma_ratio=SIGMA,
-        fix_sfr=FIX_SFR,
-        fix_mixing=FIX_MIXING,
-        fix_scale=FIX_SCALE,
-        source_ratio=SOURCE_FR,
-        scale=SCALE,
-	dimension=DIMENSION,
-	energy=ENERGY,
-	scale_bounds=SCALE2_BOUNDS,
-    )
-    chainer_plot.plot(
-        infile=outfile+'.npy',
-        angles=False,
-        outfile=outfile[:5]+outfile[5:].replace('data', 'plots')+'.pdf',
-        measured_ratio=MEASURED_FR,
-        sigma_ratio=SIGMA,
-        fix_sfr=FIX_SFR,
-        fix_mixing=FIX_MIXING,
-        fix_scale=FIX_SCALE,
-        source_ratio=SOURCE_FR,
-        scale=SCALE,
-        dimension=DIMENSION,
-        energy=ENERGY,
-        scale_bounds=SCALE2_BOUNDS,
-    )
+    # print "Making triangle plots"
+    # chainer_plot.plot(
+    #     infile=outfile+'.npy',
+    #     angles=True,
+    #     outfile=outfile[:5]+outfile[5:].replace('data', 'plots')+'_angles.pdf',
+    #     measured_ratio=MEASURED_FR,
+    #     sigma_ratio=SIGMA,
+    #     fix_sfr=FIX_SFR,
+    #     fix_mixing=FIX_MIXING,
+    #     fix_scale=FIX_SCALE,
+    #     source_ratio=SOURCE_FR,
+    #     scale=SCALE,
+	# dimension=DIMENSION,
+	# energy=ENERGY,
+	# scale_bounds=SCALE2_BOUNDS,
+    # )
+    # chainer_plot.plot(
+    #     infile=outfile+'.npy',
+    #     angles=False,
+    #     outfile=outfile[:5]+outfile[5:].replace('data', 'plots')+'.pdf',
+    #     measured_ratio=MEASURED_FR,
+    #     sigma_ratio=SIGMA,
+    #     fix_sfr=FIX_SFR,
+    #     fix_mixing=FIX_MIXING,
+    #     fix_scale=FIX_SCALE,
+    #     source_ratio=SOURCE_FR,
+    #     scale=SCALE,
+    #     dimension=DIMENSION,
+    #     energy=ENERGY,
+    #     scale_bounds=SCALE2_BOUNDS,
+    # )
     print "DONE!"
 
 

@@ -1,0 +1,6 @@
+unset PYTHONPATH
+
+export ANACONDA=/data/user/smandalia/anaconda2/bin/
+export PATH=$ANACONDA:$PATH
+
+source activate skylab

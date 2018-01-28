@@ -5,8 +5,9 @@ From an MCMC chains file, make a triangle plot.
 
 from __future__ import absolute_import, division
 
-import sys
-sys.path.append('/users/mandalia/Documents/flavour_triangle/hese/bsm/')
+import sys, os
+sys.path.append('/home/smandalia/Documents/flavour_triangle/hese/bsm/')
+import errno
 
 import numpy as np
 import matplotlib as mpl
@@ -188,6 +189,13 @@ def plot(infile, angles, outfile, measured_ratio, sigma_ratio, fix_sfr,
     else:
         mpl.pyplot.figtext(0.5, 0.7, label, fontsize=15)
     print 'outfile = {0}'.format(outfile)
+    try:
+        os.makedirs(outfile[:-len(os.path.basename(outfile))])
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
     g.export(outfile)
 
 
