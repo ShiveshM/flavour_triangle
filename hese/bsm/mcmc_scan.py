@@ -383,6 +383,7 @@ def main():
 
     SCALE2_BOUNDS = (SCALE*1E-10, SCALE*1E10)
 
+    print 'RUN_SCAN = {0}'.format(RUN_SCAN)
     print 'MEASURED_FR = {0}'.format(MEASURED_FR)
     print 'SIGMA = {0}'.format(SIGMA)
     print 'FLAT = {0}'.format(FLAT)
