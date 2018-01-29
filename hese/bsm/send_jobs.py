@@ -51,7 +51,7 @@ for dim in dimensions:
             print frs
             outchains = outchain_head + '/fix_ifr/{0}/mcmc_chain'.format(str(sig).replace('.', '_'))
             command = ''
-            command += 'qsub -cwd -V '
+            command += 'qsub -cwd -V -q SL6 '
             command += script
             command += ' {0}'.format(frs[0])
             command += ' {0}'.format(frs[1])
@@ -77,16 +77,16 @@ for dim in dimensions:
             print frs
             outchains = outchain_head + '/full_scan/{0}/mcmc_chain'.format(str(sig).replace('.', '_'))
             command = ''
-            command += 'qsub -cwd -V '
+            command += 'qsub -cwd -V -q SL6 '
             command += script
             command += ' {0}'.format(frs[0])
             command += ' {0}'.format(frs[1])
             command += ' {0}'.format(frs[2])
             command += ' {0}'.format(sig)
-            command += ' {0}'.format('True')
-            command += ' {0}'.format(frs[3])
-            command += ' {0}'.format(frs[4])
-            command += ' {0}'.format(frs[5])
+            command += ' {0}'.format('False')
+            command += ' {0}'.format(0)
+            command += ' {0}'.format(0)
+            command += ' {0}'.format(0)
             command += ' {0}'.format('False')
             command += ' {0}'.format(0)
             command += ' {0}'.format(dim)
