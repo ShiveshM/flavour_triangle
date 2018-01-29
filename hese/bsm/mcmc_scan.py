@@ -330,6 +330,7 @@ def main():
     global FIX_MIXING
     global FIX_SCALE
     global SCALE
+    global SCALE2_BOUNDS
 
     DIMENSION = args.dimension
     ENERGY = args.energy
