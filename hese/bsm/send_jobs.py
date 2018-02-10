@@ -30,8 +30,8 @@ fix_sfr_mfr = [
 ]
 
 sigmas = ['0.1', '0.01', '0.001', '0.0001', '0.00001']
-dimensions = [6]
-energy = 100000
+dimensions = [3]
+energy = [1e4, 1e6, 1e7]
 flat = False
 burnin = 2000
 nwalkers = 200
@@ -43,58 +43,61 @@ script = '/users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh'
 job_number = 1
 for dim in dimensions:
     print 'dimension', dim
-    outchain_head = '/data/icecube/mandalia/flavour_ratio/data/DIM{0}'.format(dim)
+    for en in energy:
+        print 'energy {0:.0E}'.format(en)
 
-    for sig in sigmas:
-        print 'sigma', sig
-        for frs in fix_sfr_mfr:
-            print frs
-            outchains = outchain_head + '/fix_ifr/{0}/mcmc_chain'.format(str(sig).replace('.', '_'))
-            command = ''
-            command += 'qsub -cwd -V -q SL6 '
-            command += script
-            command += ' {0}'.format(frs[0])
-            command += ' {0}'.format(frs[1])
-            command += ' {0}'.format(frs[2])
-            command += ' {0}'.format(sig)
-            command += ' {0}'.format('True')
-            command += ' {0}'.format(frs[3])
-            command += ' {0}'.format(frs[4])
-            command += ' {0}'.format(frs[5])
-            command += ' {0}'.format('False')
-            command += ' {0}'.format(0)
-            command += ' {0}'.format(dim)
-            command += ' {0}'.format(energy)
-            command += ' {0}'.format(flat)
-            command += ' {0}'.format(burnin)
-            command += ' {0}'.format(nwalkers)
-            command += ' {0}'.format(nsteps)
-            command += ' {0}'.format(outchains)
-            command += ' {0}'.format('False')
-            os.system(command)
+        outchain_head = '/data/icecube/mandalia/flavour_ratio/data/DIM{0}/{1:.0E}'.format(dim, en)
 
-        for frs in full_scan_mfr:
-            print frs
-            outchains = outchain_head + '/full_scan/{0}/mcmc_chain'.format(str(sig).replace('.', '_'))
-            command = ''
-            command += 'qsub -cwd -V -q SL6 '
-            command += script
-            command += ' {0}'.format(frs[0])
-            command += ' {0}'.format(frs[1])
-            command += ' {0}'.format(frs[2])
-            command += ' {0}'.format(sig)
-            command += ' {0}'.format('False')
-            command += ' {0}'.format(0)
-            command += ' {0}'.format(0)
-            command += ' {0}'.format(0)
-            command += ' {0}'.format('False')
-            command += ' {0}'.format(0)
-            command += ' {0}'.format(dim)
-            command += ' {0}'.format(energy)
-            command += ' {0}'.format(flat)
-            command += ' {0}'.format(burnin)
-            command += ' {0}'.format(nwalkers)
-            command += ' {0}'.format(nsteps)
-            command += ' {0}'.format(outchains)
-            command += ' {0}'.format('False')
-            os.system(command)
+        for sig in sigmas:
+            print 'sigma', sig
+            for frs in fix_sfr_mfr:
+                print frs
+                outchains = outchain_head + '/fix_ifr/{0}/mcmc_chain'.format(str(sig).replace('.', '_'))
+                command = ''
+                command += 'qsub -cwd -V -q SL6 '
+                command += script
+                command += ' {0}'.format(frs[0])
+                command += ' {0}'.format(frs[1])
+                command += ' {0}'.format(frs[2])
+                command += ' {0}'.format(sig)
+                command += ' {0}'.format('True')
+                command += ' {0}'.format(frs[3])
+                command += ' {0}'.format(frs[4])
+                command += ' {0}'.format(frs[5])
+                command += ' {0}'.format('False')
+                command += ' {0}'.format(0)
+                command += ' {0}'.format(dim)
+                command += ' {0}'.format(en)
+                command += ' {0}'.format(flat)
+                command += ' {0}'.format(burnin)
+                command += ' {0}'.format(nwalkers)
+                command += ' {0}'.format(nsteps)
+                command += ' {0}'.format(outchains)
+                command += ' {0}'.format('False')
+                os.system(command)
+
+            for frs in full_scan_mfr:
+                print frs
+                outchains = outchain_head + '/full_scan/{0}/mcmc_chain'.format(str(sig).replace('.', '_'))
+                command = ''
+                command += 'qsub -cwd -V -q SL6 '
+                command += script
+                command += ' {0}'.format(frs[0])
+                command += ' {0}'.format(frs[1])
+                command += ' {0}'.format(frs[2])
+                command += ' {0}'.format(sig)
+                command += ' {0}'.format('False')
+                command += ' {0}'.format(0)
+                command += ' {0}'.format(0)
+                command += ' {0}'.format(0)
+                command += ' {0}'.format('False')
+                command += ' {0}'.format(0)
+                command += ' {0}'.format(dim)
+                command += ' {0}'.format(en)
+                command += ' {0}'.format(flat)
+                command += ' {0}'.format(burnin)
+                command += ' {0}'.format(nwalkers)
+                command += ' {0}'.format(nsteps)
+                command += ' {0}'.format(outchains)
+                command += ' {0}'.format('False')
+                os.system(command)
