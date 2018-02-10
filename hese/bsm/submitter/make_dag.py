@@ -29,7 +29,7 @@ fix_sfr_mfr = [
 ]
 
 sigmas = ['0.1', '0.01', '0.001', '0.0001', '0.00001']
-dimensions = [3, 4, 5, 6]
+dimensions = [6]
 energy = 100000
 flat = False
 burnin = 2000
