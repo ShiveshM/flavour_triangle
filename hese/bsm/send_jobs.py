@@ -29,13 +29,13 @@ fix_sfr_mfr = [
     (1, 2, 0, 1, 2, 0)
 ]
 
-sigmas = ['0.1', '0.01', '0.001', '0.0001', '0.00001']
-dimensions = [3]
+sigmas = ['0.1', '0.01']
+dimensions = [6]
 energy = [1e4, 1e6, 1e7]
 flat = False
-burnin = 2000
+burnin = 1000
 nwalkers = 200
-nsteps = 20000
+nsteps = 10000
 scales = "1E-20 1E-30"
 
 script = '/users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh'
