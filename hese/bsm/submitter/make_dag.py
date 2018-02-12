@@ -29,12 +29,13 @@ fix_sfr_mfr = [
 ]
 
 sigmas = ['0.1', '0.01']
-dimensions = [6]
-energy = [1e4, 1e6, 1e7]
+dimensions = [3, 6]
+spectral_index = ['-2']
+binning = [1e4, 1e7, 20]
 flat = False
-burnin = 1000
+burnin = 500
 nwalkers = 200
-nsteps = 10000
+nsteps = 5000
 scales = "1E-20 1E-30"
 
 outfile = 'dagman_FR.submit'
@@ -44,10 +45,10 @@ with open(outfile, 'w') as f:
     job_number = 1
     for dim in dimensions:
         print 'dimension', dim
-        for en in energy:
-            print 'energy {0:.0E}'.format(en)
+        for s_i in spectral_index:
+            print 'spectral index {0}'.format(s_i)
 
-            outchain_head = '/data/user/smandalia/flavour_ratio/data/DIM{0}/{1:.0E}'.format(dim, en)
+            outchain_head = '/data/user/smandalia/flavour_ratio/data/DIM{0}/SI_{1}'.format(dim, s_i)
 
             for sig in sigmas:
                 print 'sigma', sig
@@ -66,13 +67,16 @@ with open(outfile, 'w') as f:
                     f.write('VARS\tjob{0}\tfix_scale="{1}"\n'.format(job_number, 'False'))
                     f.write('VARS\tjob{0}\tscale="{1}"\n'.format(job_number, 0))
                     f.write('VARS\tjob{0}\tdimension="{1}"\n'.format(job_number, dim))
-                    f.write('VARS\tjob{0}\tenergy="{1}"\n'.format(job_number, en))
+                    f.write('VARS\tjob{0}\tspectral_index="{1}"\n'.format(job_number, s_i))
                     f.write('VARS\tjob{0}\tflat_llh="{1}"\n'.format(job_number, flat))
                     f.write('VARS\tjob{0}\tburnin="{1}"\n'.format(job_number, burnin))
                     f.write('VARS\tjob{0}\tnwalkers="{1}"\n'.format(job_number, nwalkers))
                     f.write('VARS\tjob{0}\tnsteps="{1}"\n'.format(job_number, nsteps))
                     f.write('VARS\tjob{0}\toutfile="{1}"\n'.format(job_number, outchains))
                     f.write('VARS\tjob{0}\tfix_mixing="{1}"\n'.format(job_number, 'False'))
+                    f.write('VARS\tjob{0}\tb0="{1}"\n'.format(job_number, binning[0]))
+                    f.write('VARS\tjob{0}\tb1="{1}"\n'.format(job_number, binning[1]))
+                    f.write('VARS\tjob{0}\tb2="{1}"\n'.format(job_number, binning[2]))
                     job_number += 1
 
                 for frs in full_scan_mfr:
@@ -90,11 +94,14 @@ with open(outfile, 'w') as f:
                     f.write('VARS\tjob{0}\tfix_scale="{1}"\n'.format(job_number, 'False'))
                     f.write('VARS\tjob{0}\tscale="{1}"\n'.format(job_number, 0))
                     f.write('VARS\tjob{0}\tdimension="{1}"\n'.format(job_number, dim))
-                    f.write('VARS\tjob{0}\tenergy="{1}"\n'.format(job_number, en))
+                    f.write('VARS\tjob{0}\tspectral_index="{1}"\n'.format(job_number, s_i))
                     f.write('VARS\tjob{0}\tflat_llh="{1}"\n'.format(job_number, flat))
                     f.write('VARS\tjob{0}\tburnin="{1}"\n'.format(job_number, burnin))
                     f.write('VARS\tjob{0}\tnwalkers="{1}"\n'.format(job_number, nwalkers))
                     f.write('VARS\tjob{0}\tnsteps="{1}"\n'.format(job_number, nsteps))
                     f.write('VARS\tjob{0}\toutfile="{1}"\n'.format(job_number, outchains))
                     f.write('VARS\tjob{0}\tfix_mixing="{1}"\n'.format(job_number, 'False'))
+                    f.write('VARS\tjob{0}\tb0="{1}"\n'.format(job_number, binning[0]))
+                    f.write('VARS\tjob{0}\tb1="{1}"\n'.format(job_number, binning[1]))
+                    f.write('VARS\tjob{0}\tb2="{1}"\n'.format(job_number, binning[2]))
                     job_number += 1
