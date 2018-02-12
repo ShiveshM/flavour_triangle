@@ -67,16 +67,16 @@ for ((i=0; i<$count; i++));do
     arg=(${!a_c[i]})
     echo "${arg[0]} ${arg[1]} ${arg[2]} ${arg[3]} ${arg[4]} ${arg[5]}"
     outfile=/data/mandalia/flavour_ratio/data/DIM${dimension}/fix_ifr/0_1/mcmc_chain
-    qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} True ${arg[3]} ${arg[4]} ${arg[5]} False 0 ${dimension} ${energy} ${flat} ${burnin} ${nwalkers} ${nsteps} ${outfile} False
+    /users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} True ${arg[3]} ${arg[4]} ${arg[5]} False 0 ${dimension} ${energy} ${flat} ${burnin} ${nwalkers} ${nsteps} ${outfile} False
 done
 
-count=${#m_a[@]}
-for ((i=0; i<$count; i++)); do
-    arg=(${!m_a[i]})
-    echo "${arg[0]} ${arg[1]} ${arg[2]}"
+# count=${#m_a[@]}
+# for ((i=0; i<$count; i++)); do
+#     arg=(${!m_a[i]})
+#     echo "${arg[0]} ${arg[1]} ${arg[2]}"
 
-    outfile=/data/mandalia/flavour_ratio/data/DIM${dimension}/full_scan/0_1/mcmc_chain
-    qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} False 0 0 0 False 0 ${dimension} ${energy} ${flat} ${burnin} ${nwalkers} ${nsteps} ${outfile} False
+    # outfile=/data/mandalia/flavour_ratio/data/DIM${dimension}/full_scan/0_1/mcmc_chain
+    # qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} False 0 0 0 False 0 ${dimension} ${energy} ${flat} ${burnin} ${nwalkers} ${nsteps} ${outfile} False
 
     # outfile=/data/mandalia/flavour_ratio/data/DIM${dimension}/fix_mixing_zeromass/0_001/mcmc_chain
     # qsub -cwd -V /users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh ${arg[0]} ${arg[1]} ${arg[2]} ${sigma} False 0 0 0 False 0 ${dimension} ${energy} ${flat} ${burnin} ${nwalkers} ${nsteps} ${outfile} True

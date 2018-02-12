@@ -30,7 +30,8 @@ SOURCE_FR = [1, 2, 0]
 FIX_SCALE = True
 
 DIMENSION = 3
-ENERGY = 1000000 # GeV
+SPECTRAL_INDEX = -2
+BINNING = np.logspace(4, 7, 51)
 MEASURED_FR = [1, 1, 1]
 SIGMA = 0.001
 SCALE_RATIO = 100.
@@ -42,7 +43,12 @@ CHANGE_MASS = False
 if CHANGE_MASS:
     SCALE = 1E-27
 else:
-    SCALE = np.power(10, np.round(np.log10(MASS_EIGENVALUES[1]/ENERGY)) - np.log10(ENERGY**(DIMENSION-3)))
+    SCALE = np.power(
+        10, np.round(
+            np.log10(MASS_EIGENVALUES[1]/np.power(10, np.average(np.log10(BINNING)))) \
+            - np.log10(np.power(10, np.average(np.log10(BINNING)))**(DIMENSION-3))
+        )
+    )
 SCALE2_BOUNDS = (SCALE*1E-10, SCALE*1E10)
 
 
@@ -140,7 +146,7 @@ def cardano_eqn(ham):
 NUFIT_U = angles_to_u((0.307, (1-0.02195)**2, 0.565, 3.97935))
 
 
-def params_to_BSMu(theta):
+def params_to_BSMu(theta, energy):
     if FIX_MIXING:
         s12_2, c13_4, s23_2, dcp, sc2 = 0.5, 1.0-1E-6, 0.5, 0., theta
     elif FIX_SCALE:
@@ -154,13 +160,13 @@ def params_to_BSMu(theta):
     mass_matrix = np.array(
         [[0, 0, 0], [0, MASS_EIGENVALUES[0], 0], [0, 0, MASS_EIGENVALUES[1]]]
     )
-    sm_ham = (1./(2*ENERGY))*np.dot(NUFIT_U, np.dot(mass_matrix, NUFIT_U.conj().T))
+    sm_ham = (1./(2*energy))*np.dot(NUFIT_U, np.dot(mass_matrix, NUFIT_U.conj().T))
 
     new_physics_u = angles_to_u((s12_2, c13_4, s23_2, dcp))
     scale_matrix = np.array(
         [[0, 0, 0], [0, sc1, 0], [0, 0, sc2]]
     )
-    bsm_term = (ENERGY**(DIMENSION-3)) * np.dot(new_physics_u, np.dot(scale_matrix, new_physics_u.conj().T))
+    bsm_term = (energy**(DIMENSION-3)) * np.dot(new_physics_u, np.dot(scale_matrix, new_physics_u.conj().T))
 
     bsm_ham = sm_ham + bsm_term
 
@@ -171,32 +177,60 @@ def params_to_BSMu(theta):
     return eg_vector
 
 
-def u_to_fr(initial_fr, matrix):
+def u_to_fr(sf, matrix):
     """Compute the observed flavour ratio assuming decoherence."""
-    # TODO(shivesh): energy dependence
     composition = np.einsum(
-        'ai, bi, a -> b', abs(matrix)**2, abs(matrix)**2, initial_fr
+        'ai, bi, a -> b', abs(matrix)**2, abs(matrix)**2, sf
     )
-    ratio = composition / np.sum(initial_fr)
-    return ratio
+    return composition
 
 
 def triangle_llh(theta):
     """-Log likelihood function for a given theta."""
+    bin_centers = np.sqrt(BINNING[:-1]*BINNING[1:])
+    bin_width = np.abs(np.diff(BINNING))
     if FIX_SFR:
-        fr1, fr2, fr3 = SOURCE_FR
-        u = params_to_BSMu(theta)
+        source_flux = np.array(
+            [fr * np.power(bin_centers, SPECTRAL_INDEX)
+             for fr in SOURCE_FR]
+        )
     else:
-        fr1, fr2, fr3 = angles_to_fr(theta[-2:])
-        u = params_to_BSMu(theta[:-2])
+        source_flux = np.array(
+            [fr * np.power(bin_centers, SPECTRAL_INDEX)
+             for fr in angles_to_fr(theta[-2:])]
+        )
 
-    fr = u_to_fr((fr1, fr2, fr3), u)
+    mf_perbin = []
+    for i_sf, sf_perbin in enumerate(source_flux.T):
+        if FIX_SFR:
+            u = params_to_BSMu(theta, bin_centers[i_sf])
+        else:
+            u = params_to_BSMu(theta[:-2], bin_centers[i_sf])
+
+        fr = u_to_fr(sf_perbin, u)
+        mf_perbin.append(fr)
+    measured_flux = np.array(mf_perbin).T
+
+    # precision = np.average(source_flux.T[-1]) * 1E-4
+    # if not np.all(abs(np.sum(source_flux.T, axis=1) - np.sum(measured_flux.T, axis=1)) < precision):
+    #     raise AssertionError(
+    #         'Probability not conserved!\nsource =\n{0}\nmeasured =\n{1}\nprecision =\n{2}\ndiff =\n{3}\n'.format(
+    #             np.sum(source_flux.T, axis=1), np.sum(measured_flux.T, axis=1),
+    #             precision,
+    #             abs(np.sum(source_flux.T, axis=1) - np.sum(measured_flux.T, axis=1))
+    #         )
+    #     )
+
+    intergrated_measured_flux = np.sum(measured_flux * bin_width, axis=1)
+    averaged_measured_flux = (1./(BINNING[-1] - BINNING[0])) * intergrated_measured_flux
+    averaged_measured_fr = averaged_measured_flux / np.sum(averaged_measured_flux)
+
     fr_bf = MEASURED_FR
     cov_fr = np.identity(3) * SIGMA
     if FLAT:
         return 10.
     else:
-        return np.log(multivariate_normal.pdf(fr, mean=fr_bf, cov=cov_fr))
+        return np.log(multivariate_normal.pdf(averaged_measured_fr, mean=fr_bf, cov=cov_fr))
 
 
 def lnprior(theta):
@@ -284,8 +318,12 @@ def parse_args():
         help='Set the new physics dimension to consider'
     )
     parser.add_argument(
-        '--energy', type=float, default=1000,
-        help='Set the energy scale'
+        '--spectral-index', type=float, default=-2,
+        help='Set the spectal index of the flux'
+    )
+    parser.add_argument(
+        '--binning', type=float, nargs=3, default = [1e4, 1e7, 50],
+        help='Set the binning'
     )
     parser.add_argument(
         '--flat-llh', type=str, default='False',
@@ -321,7 +359,8 @@ def main():
     np.random.seed(args.seed)
 
     global DIMENSION
-    global ENERGY
+    global SPECTRAL_INDEX
+    global BINNING
     global MEASURED_FR
     global SIGMA
     global FLAT
@@ -333,7 +372,8 @@ def main():
     global SCALE2_BOUNDS
 
     DIMENSION = args.dimension
-    ENERGY = args.energy
+    SPECTRAL_INDEX = args.spectral_index
+    BINNING = np.logspace(np.log10(args.binning[0]), np.log10(args.binning[1]), args.binning[2]+1)
 
     MEASURED_FR = np.array(args.measured_ratio) / float(np.sum(args.measured_ratio))
     SIGMA = args.sigma_ratio
@@ -375,7 +415,12 @@ def main():
         if CHANGE_MASS:
             SCALE = 1E-27
         else:
-            SCALE = np.power(10, np.round(np.log10(MASS_EIGENVALUES[1]/ENERGY)) - np.log10(ENERGY**(DIMENSION-3)))
+            SCALE = np.power(
+                10, np.round(
+                    np.log10(MASS_EIGENVALUES[1]/np.power(10, np.average(np.log10(BINNING)))) \
+                    - np.log10(np.power(10, np.average(np.log10(BINNING)))**(DIMENSION-3))
+                )
+            )
 
     if FIX_MIXING and FIX_SFR:
         raise NotImplementedError('Fixed mixing and sfr not implemented')
@@ -388,7 +433,8 @@ def main():
     print 'MEASURED_FR = {0}'.format(MEASURED_FR)
     print 'SIGMA = {0}'.format(SIGMA)
     print 'FLAT = {0}'.format(FLAT)
-    print 'ENERGY = {0}'.format(ENERGY)
+    print 'SPECTRAL_INDEX = {0}'.format(SPECTRAL_INDEX)
+    print 'BINNING = {0}'.format(BINNING)
     print 'DIMENSION = {0}'.format(DIMENSION)
     print 'SCALE2_BOUNDS = {0}'.format(SCALE2_BOUNDS)
     print 'FIX_SFR = {0}'.format(FIX_SFR)
@@ -534,9 +580,10 @@ def main():
     #     fix_scale=FIX_SCALE,
     #     source_ratio=SOURCE_FR,
     #     scale=SCALE,
-	# dimension=DIMENSION,
-	# energy=ENERGY,
-	# scale_bounds=SCALE2_BOUNDS,
+    #     dimension=DIMENSION,
+    #     spectral_index=SPECTRAL_INDEX,
+    #     binning=BINNING,
+    #     scale_bounds=SCALE2_BOUNDS,
     # )
     # chainer_plot.plot(
     #     infile=outfile+'.npy',
@@ -550,7 +597,8 @@ def main():
     #     source_ratio=SOURCE_FR,
     #     scale=SCALE,
     #     dimension=DIMENSION,
-    #     energy=ENERGY,
+    #     spectral_index=SPECTRAL_INDEX,
+    #     binning=BINNING,
     #     scale_bounds=SCALE2_BOUNDS,
     # )
     print "DONE!"
