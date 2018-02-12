@@ -22,7 +22,7 @@ import tqdm
 import chainer_plot
 
 
-RUN_SCAN = True
+RUN_SCAN = False
 
 FIX_MIXING = False
 FIX_SFR = True
@@ -211,15 +211,15 @@ def triangle_llh(theta):
         mf_perbin.append(fr)
     measured_flux = np.array(mf_perbin).T
 
-    precision = np.average(source_flux.T[-1]) * 1E-4
-    if not np.all(abs(np.sum(source_flux.T, axis=1) - np.sum(measured_flux.T, axis=1)) < precision):
-        raise AssertionError(
-            'Probability not conserved!\nsource =\n{0}\nmeasured =\n{1}\nprecision =\n{2}\ndiff =\n{3}\n'.format(
-                np.sum(source_flux.T, axis=1), np.sum(measured_flux.T, axis=1),
-                precision,
-                abs(np.sum(source_flux.T, axis=1) - np.sum(measured_flux.T, axis=1))
-            )
-        )
+    # precision = np.average(source_flux.T[-1]) * 1E-4
+    # if not np.all(abs(np.sum(source_flux.T, axis=1) - np.sum(measured_flux.T, axis=1)) < precision):
+    #     raise AssertionError(
+    #         'Probability not conserved!\nsource =\n{0}\nmeasured =\n{1}\nprecision =\n{2}\ndiff =\n{3}\n'.format(
+    #             np.sum(source_flux.T, axis=1), np.sum(measured_flux.T, axis=1),
+    #             precision,
+    #             abs(np.sum(source_flux.T, axis=1) - np.sum(measured_flux.T, axis=1))
+    #         )
+    #     )
 
     intergrated_measured_flux = np.sum(measured_flux * bin_width, axis=1)
     averaged_measured_flux = (1./(BINNING[-1] - BINNING[0])) * intergrated_measured_flux

@@ -152,19 +152,19 @@ def plot(infile, angles, outfile, measured_ratio, sigma_ratio, fix_sfr,
                 dimension, spectral_index, scale, binning[0], binning[-1], len(binning)-1
             )
         else:
-            label = 'Source flavour ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nIC observed flavour ratio = [{3:.2f}, {4:.2f}, {5:.2f}]\nSigma = {6:.3f}\nDimension = {7}\nSpectral Index = {8}\nBinning = [{10}, {11}] GeV - {12} bins'.format(
+            label = 'Source flavour ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nIC observed flavour ratio = [{3:.2f}, {4:.2f}, {5:.2f}]\nSigma = {6:.3f}\nDimension = {7}\nSpectral Index = {8}\nBinning = [{9}, {10}] GeV - {11} bins'.format(
                 source_ratio[0], source_ratio[1], source_ratio[2],
                 measured_ratio[0], measured_ratio[1], measured_ratio[2], sigma_ratio,
-                dimension, spectral_index, scale, binning[0], binning[-1], len(binning)-1
+                dimension, spectral_index, binning[0], binning[-1], len(binning)-1
             )
     else:
         if fix_scale:
-	    label = 'IC observed flavour ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nSigma = {3:.3f}\nDimension = {4}\nSpectral Index = {8}\nScale = {6}\nBinning = [{10}, {11}] GeV - {12} bins'.format(
+	    label = 'IC observed flavour ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nSigma = {3:.3f}\nDimension = {4}\nSpectral Index = {8}\nScale = {6}\nBinning = [{7}, {8}] GeV - {9} bins'.format(
 		measured_ratio[0], measured_ratio[1], measured_ratio[2], sigma_ratio,
                 dimension, spectral_index, scale, binning[0], binning[-1], len(binning)-1
 	    )
 	else:
-	    label = 'IC observed flavour ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nSigma = {3:.3f}\nDimension = {4}\nSpectral Index = {8}\nBinning = [{10}, {11}] GeV - {12} bins'.format(
+	    label = 'IC observed flavour ratio = [{0:.2f}, {1:.2f}, {2:.2f}]\nSigma = {3:.3f}\nDimension = {4}\nSpectral Index = {5}\nBinning = [{6}, {7}] GeV - {8} bins'.format(
 		measured_ratio[0], measured_ratio[1], measured_ratio[2], sigma_ratio,
                 dimension, spectral_index, binning[0], binning[-1], len(binning)-1
 	    )
