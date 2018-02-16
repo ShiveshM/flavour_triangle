@@ -537,21 +537,21 @@ def main():
 	energy=ENERGY,
 	scale_bounds=SCALE2_BOUNDS,
     )
-    chainer_plot.plot(
-        infile=outfile+'.npy',
-        angles=False,
-        outfile=outfile[:5]+outfile[5:].replace('data', 'plots')+'.pdf',
-        measured_ratio=MEASURED_FR,
-        sigma_ratio=SIGMA,
-        fix_sfr=FIX_SFR,
-        fix_mixing=FIX_MIXING,
-        fix_scale=FIX_SCALE,
-        source_ratio=SOURCE_FR,
-        scale=SCALE,
-        dimension=DIMENSION,
-        energy=ENERGY,
-        scale_bounds=SCALE2_BOUNDS,
-    )
+    # chainer_plot.plot(
+    #     infile=outfile+'.npy',
+    #     angles=False,
+    #     outfile=outfile[:5]+outfile[5:].replace('data', 'plots')+'.pdf',
+    #     measured_ratio=MEASURED_FR,
+    #     sigma_ratio=SIGMA,
+    #     fix_sfr=FIX_SFR,
+    #     fix_mixing=FIX_MIXING,
+    #     fix_scale=FIX_SCALE,
+    #     source_ratio=SOURCE_FR,
+    #     scale=SCALE,
+    #     dimension=DIMENSION,
+    #     energy=ENERGY,
+    #     scale_bounds=SCALE2_BOUNDS,
+    # )
     print "DONE!"
 
 

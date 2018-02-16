@@ -173,9 +173,9 @@ def plot(infile, angles, outfile, measured_ratio, sigma_ratio, fix_sfr,
     )
 
     Tsample.updateSettings({'contours': [0.90, 0.99]})
-    Tsample.num_bins_2D=500
-    Tsample.fine_bins_2D=500
-    Tsample.smooth_scale_2D=0.03
+    Tsample.num_bins_2D=1000
+    Tsample.fine_bins_2D=1000
+    Tsample.smooth_scale_2D=0.003
 
     g = plots.getSubplotPlotter()
     g.settings.num_plot_contours = 2
