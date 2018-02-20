@@ -10,7 +10,6 @@ sys.path.append('/home/smandalia/Documents/flavour_triangle/hese/bsm/')
 import errno
 
 import argparse
-import multiprocessing
 
 import numpy as np
 from scipy.stats import multivariate_normal
@@ -18,8 +17,10 @@ from scipy import linalg
 
 import emcee
 import tqdm
+import h5py
 
 import chainer_plot
+import chi2_plot
 
 
 RUN_SCAN = False
@@ -44,6 +45,39 @@ if CHANGE_MASS:
 else:
     SCALE = np.power(10, np.round(np.log10(MASS_EIGENVALUES[1]/ENERGY)) - np.log10(ENERGY**(DIMENSION-3)))
 SCALE2_BOUNDS = (SCALE*1E-10, SCALE*1E10)
+
+SAVE_LLH = False
+CACHE = []
+MAX_LEN = 10000
+LLH_OUTPATH = './untitled.hd5'
+BURNIN = True
+
+CREATED_DATASET = False
+
+
+def process_row(d, key):
+    if len(CACHE) >= MAX_LEN:
+        store_and_clear(CACHE, key)
+    CACHE.append(d)
+
+
+def store_and_clear(lst, key):
+    global CREATED_DATASET
+
+    df = np.array(lst, dtype=np.float64)
+    if not CREATED_DATASET:
+        with h5py.File(LLH_OUTPATH, 'w') as store:
+            store.create_dataset(
+                key, data=df, dtype='float', maxshape=(None, df.shape[1]),
+                chunks=(MAX_LEN, df.shape[1])
+            )
+            CREATED_DATASET = True
+    else:
+        with h5py.File(LLH_OUTPATH, 'a') as store:
+            data = store[key]
+            data.resize(data.shape[0]+df.shape[0], axis=0)
+            data[-df.shape[0]:] = df
+    del CACHE[:]
 
 
 def test_uni(x):
@@ -196,7 +230,10 @@ def triangle_llh(theta):
     if FLAT:
         return 10.
     else:
-        return np.log(multivariate_normal.pdf(fr, mean=fr_bf, cov=cov_fr))
+        posterior =  np.log(multivariate_normal.pdf(fr, mean=fr_bf, cov=cov_fr))
+        if SAVE_LLH and not BURNIN:
+            process_row(theta.tolist() + [posterior], 'df')
+        return posterior
 
 
 def lnprior(theta):
@@ -311,6 +348,14 @@ def parse_args():
         '--outfile', type=str, default='./untitled',
         help='Path to output chains'
     )
+    parser.add_argument(
+        '--save-llh', type=str, default='False',
+        help='Save the LLH values for each evalaution'
+    )
+    parser.add_argument(
+        '--output-llh', type=str, default='./untitled.hd5',
+        help='Path to save the LLH values for each evalaution'
+    )
     args = parser.parse_args()
     return args
 
@@ -331,6 +376,9 @@ def main():
     global FIX_SCALE
     global SCALE
     global SCALE2_BOUNDS
+    global SAVE_LLH
+    global LLH_OUTPATH
+    global BURNIN
 
     DIMENSION = args.dimension
     ENERGY = args.energy
@@ -366,6 +414,13 @@ def main():
     else:
         raise ValueError
 
+    if args.save_llh.lower() == 'true':
+        SAVE_LLH = True
+    elif args.save_llh.lower() == 'false':
+        SAVE_LLH = False
+    else:
+        raise ValueError
+
     if FIX_SFR:
         SOURCE_FR = np.array(args.source_ratio) / float(np.sum(args.source_ratio))
 
@@ -384,6 +439,9 @@ def main():
 
     SCALE2_BOUNDS = (SCALE*1E-10, SCALE*1E10)
 
+    if SAVE_LLH:
+        LLH_OUTPATH = args.output_llh
+
     print 'MEASURED_FR = {0}'.format(MEASURED_FR)
     print 'SIGMA = {0}'.format(SIGMA)
     print 'FLAT = {0}'.format(FLAT)
@@ -397,6 +455,9 @@ def main():
     print 'FIX_SCALE = {0}'.format(FIX_SCALE)
     if FIX_SCALE:
         print 'SCALE = {0}'.format(SCALE)
+    print 'SAVE_LLH = {0}'.format(SAVE_LLH)
+    if SAVE_LLH:
+        print 'LLH_OUTPATH = {0}'.format(LLH_OUTPATH)
 
     if FIX_SFR:
         if FIX_MIXING:
@@ -438,35 +499,13 @@ def main():
             p0_base = [0.5, 0.5, 0.5, np.pi, s2, 0.5, 0.0]
             p0_std = [0.2, 0.2, 0.2, 0.2, 3, 0.2, 0.2]
 
-    print 'p0_base', p0_base
-    print 'p0_std', p0_std
-    p0 = np.random.normal(p0_base, p0_std, size=[ntemps, nwalkers, ndim])
-    print map(lnprior, p0[0])
-
-    if RUN_SCAN:
-        # threads = multiprocessing.cpu_count()
-        threads = 1
-        sampler = emcee.PTSampler(
-            ntemps, nwalkers, ndim, triangle_llh, lnprior, threads=threads
-        )
-
-    if RUN_SCAN:
-        print "Running burn-in"
-        for result in tqdm.tqdm(sampler.sample(p0, iterations=burnin), total=burnin):
-            pos, prob, state = result
-        sampler.reset()
-        print "Finished burn-in"
-
-        nsteps = args.nsteps
-
-        print "Running"
-        for _ in tqdm.tqdm(sampler.sample(pos, iterations=nsteps), total=nsteps):
-            pass
-        print "Finished"
-
     if FIX_SFR:
         if FIX_MIXING:
             outfile = args.outfile+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}_sfr_{4:03d}_{5:03d}_{6:03d}_DIM{7}_fix_mixing'.format(
+                int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100), int(SIGMA*1000),
+                int(SOURCE_FR[0]*100), int(SOURCE_FR[1]*100), int(SOURCE_FR[2]*100), DIMENSION
+            )
+            LLH_OUTPATH = LLH_OUTPATH+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}_sfr_{4:03d}_{5:03d}_{6:03d}_DIM{7}_fix_mixing'.format(
                 int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100), int(SIGMA*1000),
                 int(SOURCE_FR[0]*100), int(SOURCE_FR[1]*100), int(SOURCE_FR[2]*100), DIMENSION
             )
@@ -475,8 +514,16 @@ def main():
                 int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100), int(SIGMA*1000),
                 int(SOURCE_FR[0]*100), int(SOURCE_FR[1]*100), int(SOURCE_FR[2]*100), DIMENSION, SCALE
             )
+            LLH_OUTPATH = LLH_OUTPATH+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}_sfr_{4:03d}_{5:03d}_{6:03d}_DIM{7}_fixed_scale_{8}'.format(
+                int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100), int(SIGMA*1000),
+                int(SOURCE_FR[0]*100), int(SOURCE_FR[1]*100), int(SOURCE_FR[2]*100), DIMENSION, SCALE
+            )
         else:
             outfile = args.outfile+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}_sfr_{4:03d}_{5:03d}_{6:03d}_DIM{7}_single_scale'.format(
+                int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100), int(SIGMA*1000),
+                int(SOURCE_FR[0]*100), int(SOURCE_FR[1]*100), int(SOURCE_FR[2]*100), DIMENSION
+            )
+            LLH_OUTPATH = LLH_OUTPATH+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}_sfr_{4:03d}_{5:03d}_{6:03d}_DIM{7}_single_scale'.format(
                 int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100), int(SIGMA*1000),
                 int(SOURCE_FR[0]*100), int(SOURCE_FR[1]*100), int(SOURCE_FR[2]*100), DIMENSION
             )
@@ -486,8 +533,16 @@ def main():
                 int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100),
                 int(SIGMA*1000), DIMENSION
             )
+            LLH_OUTPATH = LLH_OUTPATH+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}_DIM{4}_fix_mixing'.format(
+                int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100),
+                int(SIGMA*1000), DIMENSION
+            )
         elif FIX_SCALE:
             outfile = args.outfile+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}_DIM{4}_fixed_scale_{5}'.format(
+                int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100),
+                int(SIGMA*1000), DIMENSION, SCALE
+            )
+            LLH_OUTPATH = LLH_OUTPATH+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}_DIM{4}_fixed_scale_{5}'.format(
                 int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100),
                 int(SIGMA*1000), DIMENSION, SCALE
             )
@@ -496,6 +551,42 @@ def main():
                 int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100),
                 int(SIGMA*1000), DIMENSION
             )
+            LLH_OUTPATH = LLH_OUTPATH+'_{0:03d}_{1:03d}_{2:03d}_{3:04d}_DIM{4}'.format(
+                int(MEASURED_FR[0]*100), int(MEASURED_FR[1]*100), int(MEASURED_FR[2]*100),
+                int(SIGMA*1000), DIMENSION
+            )
+
+    if FLAT:
+	outfile += '_flat'
+	LLH_OUTPATH += '_flat'
+    LLH_OUTPATH += '.hd5'
+
+    print 'p0_base', p0_base
+    print 'p0_std', p0_std
+    p0 = np.random.normal(p0_base, p0_std, size=[ntemps, nwalkers, ndim])
+    print map(lnprior, p0[0])
+
+    if RUN_SCAN:
+        threads = 1
+        sampler = emcee.PTSampler(
+            ntemps, nwalkers, ndim, triangle_llh, lnprior, threads=threads
+        )
+
+    if RUN_SCAN:
+        BURNIN = True
+        print "Running burn-in"
+        for result in tqdm.tqdm(sampler.sample(p0, iterations=burnin), total=burnin):
+            pos, prob, state = result
+        sampler.reset()
+        print "Finished burn-in"
+
+        nsteps = args.nsteps
+
+        BURNIN = False
+        print "Running"
+        for _ in tqdm.tqdm(sampler.sample(pos, iterations=nsteps), total=nsteps):
+            pass
+        print "Finished"
 
     if RUN_SCAN:
         samples = sampler.chain[0, :, :, :].reshape((-1, ndim))
@@ -508,9 +599,6 @@ def main():
         except:
             print 'WARNING : NEED TO RUN MORE SAMPLES FOR FILE ' + outfile
 
-    if FLAT:
-	outfile += '_flat'
-
     if RUN_SCAN:
         try:
             os.makedirs(outfile[:-len(os.path.basename(outfile))])
@@ -522,21 +610,21 @@ def main():
         np.save(outfile+'.npy', samples)
 
     print "Making triangle plots"
-    chainer_plot.plot(
-        infile=outfile+'.npy',
-        angles=True,
-        outfile=outfile[:5]+outfile[5:].replace('data', 'plots')+'_angles.pdf',
-        measured_ratio=MEASURED_FR,
-        sigma_ratio=SIGMA,
-        fix_sfr=FIX_SFR,
-        fix_mixing=FIX_MIXING,
-        fix_scale=FIX_SCALE,
-        source_ratio=SOURCE_FR,
-        scale=SCALE,
-	dimension=DIMENSION,
-	energy=ENERGY,
-	scale_bounds=SCALE2_BOUNDS,
-    )
+    # chainer_plot.plot(
+    #     infile=outfile+'.npy',
+    #     angles=True,
+    #     outfile=outfile[:5]+outfile[5:].replace('data', 'plots')+'_angles.pdf',
+    #     measured_ratio=MEASURED_FR,
+    #     sigma_ratio=SIGMA,
+    #     fix_sfr=FIX_SFR,
+    #     fix_mixing=FIX_MIXING,
+    #     fix_scale=FIX_SCALE,
+    #     source_ratio=SOURCE_FR,
+    #     scale=SCALE,
+	# dimension=DIMENSION,
+	# energy=ENERGY,
+	# scale_bounds=SCALE2_BOUNDS,
+    # )
     # chainer_plot.plot(
     #     infile=outfile+'.npy',
     #     angles=False,
@@ -552,6 +640,21 @@ def main():
     #     energy=ENERGY,
     #     scale_bounds=SCALE2_BOUNDS,
     # )
+    chi2_plot.plot(
+        infile=LLH_OUTPATH,
+        angles=False,
+        outfile=LLH_OUTPATH[:5]+LLH_OUTPATH[5:].replace('data', 'plots')+'.png',
+        measured_ratio=MEASURED_FR,
+        sigma_ratio=SIGMA,
+        fix_sfr=FIX_SFR,
+        fix_mixing=FIX_MIXING,
+        fix_scale=FIX_SCALE,
+        source_ratio=SOURCE_FR,
+        scale=SCALE,
+        dimension=DIMENSION,
+        energy=ENERGY,
+        scale_bounds=SCALE2_BOUNDS,
+    )
     print "DONE!"
 
 

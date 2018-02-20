@@ -215,8 +215,8 @@ def parse_args():
         help='Path to output plot'
     )
     parser.add_argument(
-        '--bestfit-ratio', type=int, nargs=3, required=False,
-        help='Set the bestfit flavour ratio'
+        '--measured-ratio', type=int, nargs=3, required=False,
+        help='Set the measured flavour ratio'
     )
     parser.add_argument(
         '--sigma-ratio', type=float, required=False,
@@ -229,6 +229,10 @@ def parse_args():
     parser.add_argument(
         '--fix-mixing', action='store_true',
         help='Fix the new physics mixing values to a single term, s_12^2'
+    )
+    parser.add_argument(
+        '--fix-scale', action='store_true',
+        help='Fix the new physics scale'
     )
     parser.add_argument(
         '--source-ratio', type=int, nargs=3, default=[2, 1, 0],

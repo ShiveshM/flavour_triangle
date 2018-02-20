@@ -12,7 +12,7 @@ f_fr = (2, 1, 0)
 g_fr = (1, 1, 0)
 
 full_scan_mfr = [
-    # (1, 1, 1), (1, 1, 0)
+    (1, 1, 1), (1, 2, 0)
 ]
 
 fix_sfr_mfr = [
@@ -29,14 +29,15 @@ fix_sfr_mfr = [
     # (1, 2, 0, 1, 2, 0)
 ]
 
-sigmas = ['0.001']
-dimensions = [3]
-energy = [1e5]
+sigmas = ['0.01']
+dimensions = [3, 6]
+energy = [1e5, 1e6, 1e7]
 flat = False
 burnin = 1000
 nwalkers = 200
 nsteps = 10000
 scales = "1E-20 1E-30"
+save_llh = 'True'
 
 script = '/users/mandalia/Documents/flavour_triangle/hese/bsm/wrap.sh'
 
@@ -53,6 +54,7 @@ for dim in dimensions:
             for frs in fix_sfr_mfr:
                 print frs
                 outchains = outchain_head + '/fix_ifr/{0}/mcmc_chain'.format(str(sig).replace('.', '_'))
+		output_llh = outchain_head + '/fix_ifr/{0}/llh_values'.format(str(sig).replace('.', '_'))
                 command = ''
                 command += 'qsub -cwd -V -q SL6 '
                 command += script
@@ -74,11 +76,15 @@ for dim in dimensions:
                 command += ' {0}'.format(nsteps)
                 command += ' {0}'.format(outchains)
                 command += ' {0}'.format('False')
+                command += ' {0}'.format(save_llh)
+                command += ' {0}'.format(output_llh)
                 os.system(command)
+                # assert 0
 
             for frs in full_scan_mfr:
                 print frs
                 outchains = outchain_head + '/full_scan/{0}/mcmc_chain'.format(str(sig).replace('.', '_'))
+                output_llh = outchain_head + '/full_scan/{0}/llh_values'.format(str(sig).replace('.', '_'))
                 command = ''
                 command += 'qsub -cwd -V -q SL6 '
                 command += script
@@ -100,4 +106,6 @@ for dim in dimensions:
                 command += ' {0}'.format(nsteps)
                 command += ' {0}'.format(outchains)
                 command += ' {0}'.format('False')
+                command += ' {0}'.format(save_llh)
+                command += ' {0}'.format(output_llh)
                 os.system(command)
