@@ -21,6 +21,7 @@ import h5py
 
 import chainer_plot
 import chi2_plot
+import freq_limit_plot
 
 
 RUN_SCAN = False
@@ -640,10 +641,25 @@ def main():
     #     energy=ENERGY,
     #     scale_bounds=SCALE2_BOUNDS,
     # )
-    chi2_plot.plot(
+    # chi2_plot.plot(
+    #     infile=LLH_OUTPATH,
+    #     angles=True,
+    #     outfile=LLH_OUTPATH[:5]+LLH_OUTPATH[5:].replace('data', 'plots')+'.png',
+    #     measured_ratio=MEASURED_FR,
+    #     sigma_ratio=SIGMA,
+    #     fix_sfr=FIX_SFR,
+    #     fix_mixing=FIX_MIXING,
+    #     fix_scale=FIX_SCALE,
+    #     source_ratio=SOURCE_FR,
+    #     scale=SCALE,
+    #     dimension=DIMENSION,
+    #     energy=ENERGY,
+    #     scale_bounds=SCALE2_BOUNDS,
+    # )
+    freq_limit_plot.plot(
         infile=LLH_OUTPATH,
-        angles=False,
-        outfile=LLH_OUTPATH[:5]+LLH_OUTPATH[5:].replace('data', 'plots')+'.png',
+        angles=True,
+        outfile=LLH_OUTPATH[:5]+LLH_OUTPATH[5:].replace('data', 'plots')[:-4]+'_freq.png',
         measured_ratio=MEASURED_FR,
         sigma_ratio=SIGMA,
         fix_sfr=FIX_SFR,
